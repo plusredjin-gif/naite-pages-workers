@@ -38,4 +38,3 @@ Google 공식 동의 화면(accounts.google.com)을 흉내 내지 않습니다.
 
 - 나이테/정원 **프로덕션 배포**
 - Google 동의 화면 앱 로고를 Cloud에서 바꾸는 작업
-- 토양 API를 나이테에 붙이는 작업
