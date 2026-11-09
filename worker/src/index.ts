@@ -1,5 +1,11 @@
 /**
- * 나이테 API Worker (스캐폴드)
+ * 나이테 API Worker (스캐폴드) — 미사용 (보관용)
+ *
+ * 2026-11-09 jin 결정: Pages-only로 전환. 이 Worker는 배포하지 않는다.
+ * 원본은 되돌릴 수 있게 그대로 둔다. worker/UNUSED.md 참조.
+ * Pages-only 대응은 docs/API_MAPPING.md, frontend/src/api.ts 참조.
+ *
+ * (아래 내용은 Pages+Workers 시절 기록으로 보관한다.)
  * - Google OAuth 로그인 (authorization-code + PKCE), refresh_token을 KV에 암호화 저장
  * - Google API 중계: Drive / Calendar / Tasks / People
  * - 메모·온톨로지 CRUD는 D1, 첨부파일은 R2 (스키마는 schema.sql 참조)

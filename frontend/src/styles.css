@@ -1,0 +1,131 @@
+/* 나이테 Pages-only — 최소 스타일 (목업 단계). 말랑말랑체·로고·캐릭터 자산은 이식 시 교체한다. */
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Malgun Gothic", sans-serif;
+  color: #222;
+  background: #fafaf5;
+}
+
+.app {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.header h1 {
+  margin: 0;
+  flex: 1;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+
+.toolbar input[type="search"],
+.toolbar select {
+  padding: 8px;
+  font-size: 14px;
+}
+
+button {
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.notice {
+  background: #fff3cd;
+  border: 1px solid #e6c87a;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.meta {
+  color: #666;
+  font-size: 13px;
+}
+
+.memo-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.memo-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+  width: 100%;
+  gap: 4px;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.memo-title {
+  font-weight: 700;
+}
+
+.memo-preview {
+  color: #555;
+  font-size: 13px;
+}
+
+.memo-date {
+  color: #999;
+  font-size: 12px;
+}
+
+.pager {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.memo-title-input {
+  width: 100%;
+  font-size: 20px;
+  font-weight: 700;
+  padding: 8px;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.block {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.block textarea,
+.block input[type="text"] {
+  flex: 1;
+  padding: 8px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
