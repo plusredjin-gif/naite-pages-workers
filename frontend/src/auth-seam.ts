@@ -122,6 +122,8 @@ export function createRealAuthProvider(): AuthProvider {
           "email",
           "profile",
         ].join(" "),
+        include_granted_scopes: "true",
+        prompt: "consent",
         state,
       }).toString();
       // 주의: response_type=token(Implicit)은 URL 해시에 토큰이 남는다.
@@ -135,19 +137,91 @@ export function createRealAuthProvider(): AuthProvider {
   };
 }
 
-/** OAuth 콜백 해시(#access_token=...)에서 토큰을 꺼내 sessionStorage에 저장한다. 그록 콜백 처리가 쓴다. */
-export function saveTokenFromCallbackHash(hash: string): boolean {
-  const params = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+export type CallbackResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+const OAUTH_STATE_KEY = "naite.oauth.state";
+
+/**
+ * OAuth 콜백 해시(#access_token=...)에서 토큰을 꺼내 sessionStorage에 저장한다.
+ * state 검증·에러 파라미터 처리 후, 성공/실패와 관계없이 URL 해시를 비운다.
+ */
+export function saveTokenFromCallbackHash(hash: string = typeof window !== "undefined" ? window.location.hash : ""): CallbackResult {
+  const clearHash = () => {
+    if (typeof window === "undefined") return;
+    try {
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const raw = hash.startsWith("#") ? hash.slice(1) : hash;
+  if (!raw) {
+    clearHash();
+    return { ok: false, error: "콜백에 토큰이 없습니다. 다시 로그인해 주세요." };
+  }
+  const params = new URLSearchParams(raw);
+  const oauthError = params.get("error");
+  if (oauthError) {
+    clearHash();
+    try {
+      sessionStorage.removeItem(OAUTH_STATE_KEY);
+    } catch {
+      /* ignore */
+    }
+    const desc = params.get("error_description");
+    return {
+      ok: false,
+      error: `Google 동의 거부 또는 오류: ${oauthError}${desc ? ` (${desc})` : ""}`,
+    };
+  }
+
+  const expected = (() => {
+    try {
+      return sessionStorage.getItem(OAUTH_STATE_KEY);
+    } catch {
+      return null;
+    }
+  })();
+  const got = params.get("state");
+  if (expected && got && expected !== got) {
+    clearHash();
+    try {
+      sessionStorage.removeItem(OAUTH_STATE_KEY);
+    } catch {
+      /* ignore */
+    }
+    return { ok: false, error: "OAuth state가 일치하지 않습니다. 다시 로그인해 주세요." };
+  }
+
   const accessToken = params.get("access_token");
   const expiresIn = Number(params.get("expires_in") ?? "3600");
   const scope = params.get("scope") ?? "";
-  if (!accessToken) return false;
+  if (!accessToken) {
+    clearHash();
+    return { ok: false, error: "access_token이 없습니다." };
+  }
   saveAccessToken({
     accessToken,
-    expiresAt: Date.now() + Math.max(expiresIn, 60) * 1000,
+    expiresAt: Date.now() + Math.max(Number.isFinite(expiresIn) ? expiresIn : 3600, 60) * 1000,
     scope,
   });
-  return true;
+  try {
+    sessionStorage.removeItem(OAUTH_STATE_KEY);
+  } catch {
+    /* ignore */
+  }
+  clearHash();
+  return { ok: true };
+}
+
+/** 공개 웹 클라이언트 ID가 설정됐는지 (UI 안내용). */
+export function isGoogleClientConfigured(): boolean {
+  // @ts-expect-error Vite 환경에서만 존재
+  const id = typeof import.meta !== "undefined" && (import.meta.env?.VITE_GOOGLE_CLIENT_ID as string | undefined);
+  return Boolean(id && String(id).trim());
 }
 
 /**
