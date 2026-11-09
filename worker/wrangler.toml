@@ -1,0 +1,30 @@
+name = "naite-api"
+main = "src/index.ts"
+compatibility_date = "2026-11-08"
+
+# 커스텀 도메인 (배포 후 Cloudflare 대시보드로 연결하거나 route로 지정)
+# routes = [{ pattern = "api.naite.plustree.net", custom_domain = true }]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "naite-db"
+database_id = "REPLACE_WITH_D1_ID"
+
+[[kv_namespaces]]
+binding = "TOKENS"
+id = "REPLACE_WITH_KV_ID"
+
+[[r2_buckets]]
+binding = "ATTACHMENTS"
+bucket_name = "naite-attachments"
+
+[vars]
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+
+# Secrets (wrangler secret put 으로 등록. 값은 채팅·파일에 남기지 않는다):
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_SECRET, TOKEN_ENCRYPTION_KEY
+#   OAUTH_REDIRECT_URI = https://naite.plustree.net/api/auth/callback
+
+[triggers]
+crons = ["*/30 * * * *"]
