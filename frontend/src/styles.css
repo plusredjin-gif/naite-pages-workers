@@ -129,3 +129,65 @@ button:disabled {
   font-size: 14px;
   box-sizing: border-box;
 }
+
+/* —— 로그인·동의 안내 (그록) —— */
+.login-guide {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 2rem;
+}
+
+.login-guide h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+}
+
+.login-guide .lead {
+  font-size: 1.05rem;
+  margin: 0 0 0.75rem;
+}
+
+.login-guide .guide-list {
+  margin: 1rem 0 1.25rem;
+  padding-left: 1.25rem;
+  line-height: 1.55;
+}
+
+.login-guide .guide-list li {
+  margin-bottom: 0.65rem;
+}
+
+.login-guide button {
+  margin-top: 0.25rem;
+}
+
+.site-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2rem;
+  padding: 1rem 0.75rem;
+  border-top: 1px solid #e5e5e5;
+  font-size: 12px;
+}
+
+.site-foot a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .login-guide {
+    padding: 1rem 0.75rem 1.5rem;
+  }
+  .header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .header h1 {
+    font-size: 1.25rem;
+  }
+}
