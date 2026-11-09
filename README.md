@@ -92,7 +92,7 @@ Worker API 기능이 어디로 갔는지는 `docs/API_MAPPING.md` 참조.
 
 - **Cloudflare 추가 토큰 불필요** (2026-11-09 jin 정정): jin이 말하는 '토큰'은 Muse 토큰이다. Cloudflare는 무료라 추가 토큰 발급이 필요 없다. 이전 기록의 "추가 토큰 발급" 항목은 폐기한다. 기존 Cloudflare 토큰으로 Pages 배포는 11/08에 확인됐다.
 - **로그인 소유 변경** (2026-11-09 jin 결정): 로그인 방식은 그록이 맡는다. 프론트엔드 로그인 화면·`AuthProvider` 구현은 그록 소유이며, 나머지 개발은 건드리지 않는다. 연동 지점은 `docs/LOGIN_SEAM.md` 참조.
-- **OAuth 클라이언트 없음**: naite.plustree.net용 Google OAuth 클라이언트는 아직 없다. jin이 맨 마지막에, 제작이 다 끝나고 나서 만든다 (테스트할 때는 실제 OAuth 연결 없이 진행).
+- **OAuth 클라이언트 없음**: naite.plustree.net용 Google OAuth 클라이언트는 아직 없다. jin이 맨 마지막에, 제작이 다 끝나고 나서 만든다 (테스트할 때는 실제 OAuth 연결 없이 진행). → **2026-11-10 jin이 클라이언트 ID 제공, Pages 적용·배포 완료 (12절 참조).**
 - **프론트엔드 화면 이식 미완료**: API 경계·메모 목록·편집기까지만 구현됐다. 나머지 화면(격자·아웃라인·마인드맵·온톨로지·분석·일정·사람·장소·설정)은 `frontend/README.md` 체크리스트대로 이식 필요.
 
 ## 7. 토큰 관련 정정 (2026-11-09 jin)
@@ -176,7 +176,7 @@ naite-pages-workers/
 | 마이그레이션 계획 | **갱신 완료** (Drive → 로컬 저장소). 실행은 OAuth 연결 후 앱 안에서 |
 | 도메인 전환 절차서 | **갱신 완료** (Pages-only). 실행은 전환 조건 충족 후 |
 | Worker 배포 (`wrangler deploy`) | **하지 않음** — Pages-only에서는 폐기 |
-| Google OAuth 클라이언트 | 미생성 — jin이 맨 마지막에 생성 |
+| Google OAuth 클라이언트 | **적용 완료 (2026-11-10)** — jin이 클라이언트 ID 제공, Pages 빌드에 주입·배포 완료 (12절). 실제 Google 로그인은 jin이 직접 테스트 |
 | 로그인 (`AuthProvider`, 브라우저 OAuth) | 그록 소유 — 진행 상황 별도 확인 필요 |
 
 ## 11. 로그인 적용 (2026-11-09, 그록 브랜치 `grok/login-consent-guide` → main 적용)
@@ -186,3 +186,13 @@ naite-pages-workers/
 - 내용: 로그인 게이트에 권한 안내(LoginGuide)·더하기나무 footer, OAuth 콜백 해시 처리(state 검증·에러 처리·해시 제거), 로그인 시 `prompt=consent` + `include_granted_scopes=true`, `saveTokenFromCallbackHash` 반환값 boolean → `CallbackResult` 변경, `isGoogleClientConfigured()` 추가. Google 공식 동의 화면은 흉내 내지 않음.
 - 충돌 없음: 로그인 외 파일(Worker·migration·api.ts·google-client.ts·local-store.ts·token-store.ts)은 브랜치와 동일해서 건드리지 않음.
 - 주의: `saveTokenFromCallbackHash` 반환 타입이 바뀌어, 옛 boolean 사용처가 있으면 수정 필요 (현재 코드베이스에는 없음). selftest는 실제 함수를 import하지 않고 로직 복사본을 테스트함.
+
+## 12. Google OAuth 클라이언트 ID 적용 (2026-11-10, jin 제공)
+
+- jin이 클라이언트 ID 제공: `551200708040-kanrdsov8059e2rt41hrif52tk63i75f.apps.googleusercontent.com` (공개 식별자라 JS 번들에 실려도 됨. client_secret은 브라우저에 절대 두지 않음 — jin이 준 적도 없고 만들지도 않음).
+- 적용 방식 (두 가지 병행):
+  1. **빌드 시점 주입 (실제 배포에 사용)**: `VITE_GOOGLE_CLIENT_ID=<ID> npm run build` — Vite가 `import.meta.env.VITE_GOOGLE_CLIENT_ID`를 번들에 인라인한다. 직접 업로드 배포라 Pages 빌드 환경변수는 빌드에 영향을 주지 않으므로 이 방식이 필수.
+  2. **Pages 프로젝트 환경변수 등록**: Cloudflare API로 `plustree-memo` 프로젝트의 production·preview `deployment_configs.env_vars`에 `VITE_GOOGLE_CLIENT_ID` 등록 완료 (나중에 Git 연동 빌드로 바꿀 때 사용).
+- 빌드·배포: `tsc --noEmit` + Vite 빌드 통과 (JS 184.93KB, 번들에 클라이언트 ID 포함 확인). Pages 배포 `d7b6b43f` success (2026-11-09 23:28 UTC).
+- 확인 (2026-11-10): `naite.plustree.net`·`memo.plustree.net` 모두 새 앱 서빙, 로그인 안내(LoginGuide) 화면에서 "클라이언트 ID가 아직 없습니다" 안내가 사라짐 → `isGoogleClientConfigured()=true`, "Google로 로그인" 버튼 활성화 상태. 배포된 JS 번들에 클라이언트 ID 인라인 확인. 실제 Google 로그인 완료까지는 테스트하지 않음 (jin이 직접).
+- 리디렉션: 로그인 버튼을 누르면 `https://accounts.google.com/o/oauth2/v2/auth`로 이동, `redirect_uri`는 접속 도메인 기준 `https://naite.plustree.net/auth/callback` (코드상 `window.location.origin + "/auth/callback"`). **주의: Google Cloud 콘솔에 해당 리디렉션 URI와 승인된 자바스크립트 원본(`https://naite.plustree.net`)이 등록돼 있어야 로그인이 성공한다.** 콘솔 등록 여부는 여기서 확인할 수 없으니, 로그인 시 `redirect_uri_mismatch` 오류가 나면 콘솔 설정을 먼저 확인할 것. `memo.plustree.net`에서 로그인하면 리디렉션 URI가 `https://memo.plustree.net/auth/callback`이 되므로, 그 도메인으로 로그인하려면 콘솔에 해당 URI도 등록해야 한다.
