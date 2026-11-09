@@ -4,11 +4,18 @@
  * - Google API 중계: Drive / Calendar / Tasks / People
  * - 메모·온톨로지 CRUD는 D1, 첨부파일은 R2 (스키마는 schema.sql 참조)
  *
+ * 소유 구분 (2026-11-09 jin 결정):
+ * - 로그인(/api/auth/*)은 그록 소유 — 이 파일의 로그인 구간은 그록 작업과 충돌하지 않게
+ *   건드리지 않는다. 연동 지점은 docs/LOGIN_SEAM.md 참조.
+ * - 로그인 외 API는 worker/src/api.ts, 백그라운드 동기화는 worker/src/sync.ts.
+ *
  * 아직 배포 전이다. 필요한 것:
- *  1) jin이 발급한 추가 Cloudflare 토큰 (Workers/D1/KV/R2 권한 포함)
- *  2) jin이 만든 Google OAuth 클라이언트 (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)
- *  3) wrangler d1 create / kv:namespace create / r2 bucket create 후 ID를 wrangler.toml에 반영
+ *  1) Google OAuth 클라이언트 (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET) — 맨 마지막에 생성
+ *  2) wrangler d1 create / kv:namespace create / r2 bucket create 후 ID를 wrangler.toml에 반영
  */
+
+import { handleApi, corsPreflightHeaders } from "./api";
+import { runScheduledSync } from "./sync";
 
 export interface Env {
   DB: D1Database;
@@ -102,6 +109,11 @@ export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
 
+    // 0) CORS preflight (Pages 정적 프론트엔드 → api 도메인). 로그인 라우트 CORS는 그록 소유.
+    if (req.method === "OPTIONS" && url.pathname.startsWith("/api/")) {
+      return new Response(null, { status: 204, headers: corsPreflightHeaders(req) });
+    }
+
     // 1) 로그인 시작: PKCE 코드 챌린지 생성 후 Google 인가 화면으로 이동
     if (url.pathname === "/api/auth/login") {
       const verifier = base64url(crypto.getRandomValues(new Uint8Array(32)));
@@ -182,16 +194,19 @@ export default {
       return googleProxy(req, env, path);
     }
 
-    // 5) 헬스체크
+    // 4b) 헬스체크 (세션 없이 확인)
     if (url.pathname === "/api/health") return json({ ok: true });
+
+    // 4c) 로그인 외 API (api.ts). /api/auth/*는 여기로 오지 않는다 (그록 소유).
+    if (url.pathname.startsWith("/api/")) {
+      return handleApi(req, env, url, { json, getSessionUserId, getAccessToken, googleProxy });
+    }
 
     return json({ error: "not_found" }, 404);
   },
 
-  /** 백그라운드 동기화 (Cron Trigger, 30분 간격): Drive·Tasks 동기화 큐 처리 */
+  /** 백그라운드 동기화 (Cron Trigger, 30분 간격): Drive·Tasks 동기화 (sync.ts) */
   async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
-    // TODO: 동기화 대상 사용자 목록을 D1에서 조회해 Drive/Tasks 증분 동기화 실행.
-    // 스캐폴드 단계에서는 실행하지 않는다 (OAuth 토큰·D1 스키마 확정 후 구현).
-    console.log("scheduled sync tick", new Date().toISOString());
+    await runScheduledSync(env, { json, getSessionUserId, getAccessToken, googleProxy });
   },
 };

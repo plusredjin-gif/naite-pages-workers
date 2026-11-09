@@ -58,58 +58,35 @@ Cloudflare: 플러스트리 계정 `afcc73162112ed35152fe21ff2461cb0`, Pages 프
 - 첨부파일: R2
 - Drive는 그대로 "진실의 원본" 중 하나로 유지 (기존 설계: 메모 1개=Drive 파일 1개)
 
-## 4. 배포 순서 (남은 단계)
+## 4. 배포 순서 (남은 단계 — 2026-11-09 갱신)
 
-1. **jin이 할 일 A — Cloudflare 추가 토큰 발급·제출** (아래 6절 참조). Workers·D1·R2·KV 권한이 있는 토큰이 필요하다. 기존 토큰은 Pages 배포만 확인됐고, Account Read도 없다.
-2. **jin이 할 일 B — Google OAuth 클라이언트 생성** (아래 7절 참조). jin의 Google 계정으로만 가능하다. Redirect URI에 `https://naite.plustree.net/api/auth/callback` 등록.
-3. 프론트엔드 정적 빌드: memoaeb 클라이언트를 Pages용 정적 앱으로 재구축 (artifact 빌더로 진행, 기존 Muse 앱은 유지).
-4. Worker 배포: `worker/`를 `wrangler deploy`로 배포, `api.naite.plustree.net` 커스텀 도메인 연결.
-5. D1·KV·R2 생성 및 마이그레이션 적용, secrets 등록 (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, `TOKEN_ENCRYPTION_KEY`).
-6. 데이터 마이그레이션: Muse 앱의 기존 메모·설정을 D1/R2로 이전 (Drive `memo` 폴더가 원본이므로 Drive import 경로로 복원 가능 — 기존 데이터·설정을 건드리지 않고 별도 검증).
-7. 도메인 전환: `naite.plustree.net`을 Pages(새 프론트엔드)로, API를 Worker로 연결. `memo.plustree.net`은 전환 완료 전까지 유지.
-8. 종단 검증: 로그인 → 메모 작성 → Drive 동기화 → 캘린더·할일·연락처·장소 동작 확인.
+1. **프론트엔드 정적 빌드**: `frontend/` 계획대로 memoaeb 클라이언트를 Pages용 정적 앱으로 재구축 (artifact 빌더로 진행, 기존 Muse 앱은 유지). 로그인 화면은 그록 작업이 들어갈 자리를 비워둔다.
+2. **Worker 배포**: `worker/`를 `wrangler deploy`로 배포, `api.naite.plustree.net` 커스텀 도메인 연결.
+3. **D1·KV·R2 생성 및 마이그레이션 적용**, secrets 등록 (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, `TOKEN_ENCRYPTION_KEY`, `GOOGLE_MAPS_API_KEY`).
+4. **데이터 마이그레이션**: `migration/PLAN.md` 순서대로 Drive `memo` 폴더에서 D1/R2로 복원 (dry-run 먼저, 기존 데이터·설정을 건드리지 않고 별도 검증).
+5. **도메인 전환**: `docs/domain-transition.md` 절차대로 `naite.plustree.net`을 Pages(새 프론트엔드)로, API를 Worker로 연결. `memo.plustree.net`은 전환 완료 전까지 유지.
+6. **맨 마지막 — Google OAuth 클라이언트 생성·연결** (jin, 제작이 다 끝나고 나서). 테스트할 때는 실제 OAuth 연결 없이 진행한다.
+7. **종단 검증**: 로그인 → 메모 작성 → Drive 동기화 → 캘린더·할일·연락처·장소 동작 확인. 다 되면 jin에게 알린다.
 
 ## 5. 지금 막혀 있는 지점 (확인된 사실만)
 
-- **추가 토큰 없음**: "추가 토큰"이 어디에도 없다. Secure Vault에 저장된 Cloudflare 자격증명은 기존 토큰 1개뿐이고, 워크스페이스 파일·메모 어디에도 추가 토큰은 없다. 2026-11-02 jin의 "만들었다"는 발언은 토큰인지 계정인지 불명이며, 저장된 토큰은 바뀐 적 없다. → 새로 만들어서 제출해야 한다.
-- **기존 토큰 상태**: 2026-11-08 기준 Pages 배포는 됐으나, 계정 목록 조회는 0개(Account Read 없음). Workers/D1/R2 권한 보유 여부는 미확인. 토큰 만료 여부는 이번에 직접 확인하지 않았다 (jin 지시: 기존 토큰이 떨어지면 그때 교체).
-- **OAuth 클라이언트 없음**: naite.plustree.net용 Google OAuth 클라이언트는 아직 없다. jin이 직접 만들어야 한다.
-- **프론트엔드 정적 빌드 없음**: memoaeb에서 추출할 정적 번들이 없다. 재구축이 필요하다.
+- **Cloudflare 추가 토큰 불필요** (2026-11-09 jin 정정): jin이 말하는 '토큰'은 Muse 토큰이다. Cloudflare는 무료라 추가 토큰 발급이 필요 없다. 이전 기록의 "추가 토큰 발급" 항목은 폐기한다. 기존 Cloudflare 토큰으로 Pages 배포는 11/08에 확인됐다.
+- **로그인 소유 변경** (2026-11-09 jin 결정): 로그인 방식은 그록이 맡는다. `worker/src/index.ts`의 `/api/auth/*` 구간과 프론트엔드 로그인 화면은 그록 소유이며, 나머지 개발은 건드리지 않는다. 연동 지점은 `docs/LOGIN_SEAM.md` 참조.
+- **OAuth 클라이언트 없음**: naite.plustree.net용 Google OAuth 클라이언트는 아직 없다. jin이 맨 마지막에, 제작이 다 끝나고 나서 만든다 (테스트할 때는 실제 OAuth 연결 없이 진행).
+- **프론트엔드 정적 빌드 없음**: memoaeb에서 추출할 정적 번들이 없다. `frontend/README.md` 계획대로 재구축이 필요하다.
 
-## 6. 토큰 교체 절차 (jin 지시: 기존 토큰이 떨어지면 추가 토큰으로 교체)
+## 6. 토큰 관련 정정 (2026-11-09 jin)
 
-### 교체 시점 판단
-- 배포·API 호출이 `403 / error 9109 (Invalid access token)` 또는 `401`로 실패하면 기존 토큰 만료·무효로 판단한다.
-- 토큰 교체는 Cloudflare 자격증명만 바꾸는 것이고, **Pages 프로젝트·커스텀 도메인·배포물은 그대로 유지**된다. 배포물 자체는 토큰과 무관하게 계속 서빙된다.
-- 데이터는 D1/R2/Drive에 있고 토큰에 귀속되지 않으므로, 토큰 교체로 메모·설정이 끊기거나 지워지지 않는다. 단, 교체 완료 전까지는 새 배포·Workers 관리 API 호출만 멈춘다.
+- jin이 말하는 '토큰'은 **Muse 토큰**이다. Cloudflare는 무료라 추가 토큰 발급이
+  필요 없다. 이 절의 이전 내용(Cloudflare 추가 토큰 발급·교체 절차)은 폐기한다.
+- Muse 토큰이 떨어지면 추가 Muse 토큰을 쓰는 것은 jin과 Muse 사이의 일로,
+  이 배포 작업과는 무관하다.
+- 기존 Cloudflare 토큰으로 Pages 배포는 2026-11-08에 확인됐다. Workers/D1/R2
+  배포는 `wrangler`로 직접 하거나, 권한이 부족하면 그때 jin에게 알린다.
 
-### 교체 순서 (끊김 없이)
-1. 새 토큰을 발급한다 (아래 발급 방법 참조).
-2. Secure Vault의 `custom.cloudflare` 커넥터에 새 토큰으로 **교체(reconnect)** 한다. 기존 토큰은 교체 순간까지 유지되므로, 교체 전에 기존 배포물은 계속 동작한다.
-3. 교체 직후 `GET /accounts/{플러스트리 계정 ID}/pages/projects/plustree-memo` 조회로 새 토큰 유효성을 확인한다.
-4. 확인이 끝나면 정적 재배포 1회로 파이프라인을 검증한다 (`plustree-memo.pages.dev` 200 확인).
-5. 기존 토큰은 Cloudflare 대시보드에서 폐기한다 (동일 토큰을 두 곳에서 쓰지 않기 위해).
+## 7. jin이 해야 할 일 — Google OAuth 클라이언트 생성 (맨 마지막에)
 
-### 추가 토큰 발급 방법 (jin이 직접, Cloudflare 대시보드)
-1. https://dash.cloudflare.com/ 로그인 (plusredjin@gmail.com).
-2. 우측 상단 프로필 → **My Profile → API Tokens → Create Token**.
-3. **권한 (Account Resources: 플러스트리 계정 `afcc73162112ed35152fe21ff2461cb0` 지정)**:
-   - Account: **Cloudflare Pages — Edit**
-   - Account: **Workers Scripts — Edit**
-   - Account: **Workers KV Storage — Edit**
-   - Account: **D1 — Edit**
-   - Account: **Workers R2 Storage — Edit**
-   - Account: **Account — Read** (계정 목록 조회용; 없으면 ID 직접 지정 우회 가능)
-   - (또는 "Edit Cloudflare Workers" 템플릿 + Pages Edit 추가)
-4. **TTL(유효기간)**: 지정하지 않음 (만료되면 또 교체해야 한다). IP 제한은 걸지 않는다.
-5. 생성 직후 보이는 토큰 값을 **채팅·파일에 붙여넣지 말고** Secure Vault 제출 화면에 입력한다. 토큰은 생성 시 1회만 보인다.
-
-### 제출 방법
-- Muse의 Cloudflare 커넥터 reconnect 링크로 새 토큰을 제출한다. 제출은 jin 본인이 Secure Vault 화면에서 직접 입력한다. 토큰 값을 채팅으로 보내면 안 된다.
-
-## 7. jin이 해야 할 일 — Google OAuth 클라이언트 생성
-
-Worker가 Google 로그인을 하려면 jin의 Google 계정으로 OAuth 클라이언트를 만들어야 한다. 대행 불가.
+Worker가 Google 로그인을 하려면 jin의 Google 계정으로 OAuth 클라이언트를 만들어야 한다. 대행 불가. **시점은 맨 마지막, 제작이 다 끝나고 나서** (jin 결정). 테스트할 때는 실제 OAuth 연결 없이 진행한다.
 
 1. https://console.cloud.google.com/ 접속 (나이테에 쓸 Google 계정으로 로그인).
 2. 프로젝트 선택/생성 (예: `naite`).
@@ -120,3 +97,46 @@ Worker가 Google 로그인을 하려면 jin의 Google 계정으로 OAuth 클라�
    - 승인된 리디렉션 URI: `https://naite.plustree.net/api/auth/callback` (Worker 배포 후 실제 경로에 맞게 조정 가능 — 배포 시 최종 확정)
 6. 발급된 **클라이언트 ID·클라이언트 보안 비밀번호**는 채팅·파일에 올리지 말고, Worker secrets로 직접 등록하거나 Secure Vault 제출 화면으로 전달한다.
 7. 참고: 테스트 모드는 사용자 100명 cap, refresh_token 7일 만료. 공개 심사는 나중 단계로 보류 (jin 결정).
+
+## 8. 저장소 파일 구조 (2026-11-09 갱신)
+
+```
+naite-pages-workers/
+  README.md                     # 이 문서 (아키텍처·작업 기록)
+  worker/
+    src/
+      index.ts                  # Worker 진입점 + 로그인(/api/auth/*, 그록 소유)
+      api.ts                    # 로그인 외 API 전부 (카테고리·메모·키워드·온톨로지·
+                                #   사람·장소·위치·캘린더·할일·Drive·첨부·분석·설정)
+      sync.ts                   # 크론 백그라운드 동기화 (30분 간격)
+    schema.sql                  # D1 스키마 0001 (기존)
+    migrations/
+      0002_settings_sync.sql    # D1 스키마 0002 (settings·sync_state)
+    wrangler.toml               # naite-api Worker 설정 (D1·KV·R2 바인딩, 크론)
+  frontend/
+    README.md                   # 정적 재구축 계획·이식 체크리스트
+    src/
+      api.ts                    # Worker API 타입 클라이언트
+      auth-seam.ts              # 인증 경계 (AuthProvider 인터페이스 + 개발용 mock)
+  migration/
+    PLAN.md                     # 데이터 마이그레이션 계획 (Drive → D1/R2)
+    migrate.ts                  # 마이그레이션 스크립트 틀 (기본 dry-run)
+  docs/
+    LOGIN_SEAM.md               # 로그인 연동 지점 (그록 소유 구간 정의)
+    domain-transition.md        # 도메인 전환 절차 (실행 전)
+```
+
+## 9. 진행 상황 (2026-11-09)
+
+| 항목 | 상태 |
+|---|---|
+| Worker 로그인 외 API (`api.ts`) | 구현 완료 (코드 기준, 배포 전) |
+| Worker 크론 동기화 (`sync.ts`) | 구현 완료 (토큰 연결 후 동작) |
+| D1 스키마 0001·0002 | 완료 |
+| 프론트엔드 API 클라이언트·인증 경계 | 완료 (`frontend/src/api.ts`, `auth-seam.ts`) |
+| 프론트엔드 화면 이식 (Vite 앱·UI) | 미착수 — `frontend/README.md` 계획대로 진행 필요 |
+| 마이그레이션 스크립트 틀 | 완료 (실행은 OAuth 연결 후) |
+| 도메인 전환 절차서 | 완료 (실행은 전환 조건 충족 후) |
+| Worker 배포 (`wrangler deploy`) | 미실시 — OAuth 클라이언트·D1/KV/R2 생성 후 |
+| Google OAuth 클라이언트 | 미생성 — jin이 맨 마지막에 생성 |
+| 로그인 (`/api/auth/*`, `/api/auth/me`) | 그록 소유 — 진행 상황 별도 확인 필요 |
