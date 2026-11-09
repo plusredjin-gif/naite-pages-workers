@@ -1,0 +1,7 @@
+*.backup
+*.backup[0-9]*
+.env
+.env.*
+.dev.vars
+node_modules/
+dist/

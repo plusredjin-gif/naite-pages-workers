@@ -13,7 +13,10 @@
 | 토큰 보관 (sessionStorage) | 공용 — 형식은 이 문서가 고정 | `frontend/src/token-store.ts` |
 | 로그인 외 API 전부 (로컬 저장소 + Google API 직접 호출) | 나머지 개발 | `frontend/src/api.ts`, `local-store.ts`, `google-client.ts` |
 | 백그라운드 동기화 | **없음 (Pages-only 미지원)** | — (Worker `sync.ts`는 미사용 보관용) |
-| 로그인 UI·동의 화면 (정적 프론트엔드) | **그록** | `frontend/src/auth-seam.ts`의 `AuthProvider` 구현 |
+| 로그인 UI·동의 화면 (정적 프론트엔드) | **그록** | `frontend/src/LoginGuide.tsx`, `App.tsx` 게이트, `auth-seam.ts` |
+| OAuth 콜백 (`/auth/callback` 해시→token) | **그록** | `main.tsx` + `saveTokenFromCallbackHash` |
+| SPA 폴백 `_redirects` | **그록** | `frontend/public/_redirects` |
+| 동의 안내·콘솔 체크리스트 문서 | **그록** | `docs/GOOGLE_CONSENT_GUIDE.md` |
 | 로그인 외 화면 전부 | 나머지 개발 | `frontend/src/api.ts` + 이식 화면 |
 
 ## 폐기된 것 (Pages+Workers 시절 — 다시 쓰지 않는다)

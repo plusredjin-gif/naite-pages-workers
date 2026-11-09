@@ -178,3 +178,11 @@ naite-pages-workers/
 | Worker 배포 (`wrangler deploy`) | **하지 않음** — Pages-only에서는 폐기 |
 | Google OAuth 클라이언트 | 미생성 — jin이 맨 마지막에 생성 |
 | 로그인 (`AuthProvider`, 브라우저 OAuth) | 그록 소유 — 진행 상황 별도 확인 필요 |
+
+## 11. 로그인 적용 (2026-11-09, 그록 브랜치 `grok/login-consent-guide` → main 적용)
+
+- 가져온 커밋: `127fbf94` "feat(auth): 로그인·동의 안내 UI와 OAuth 콜백 처리" (main `a084e140` 기반).
+- 적용 파일: `frontend/src/LoginGuide.tsx`(신규), `frontend/src/App.tsx`, `frontend/src/auth-seam.ts`, `frontend/src/main.tsx`, `frontend/src/styles.css`, `docs/LOGIN_SEAM.md`, `docs/GOOGLE_CONSENT_GUIDE.md`(신규), `frontend/public/_redirects`(신규, SPA 폴백 `/* /index.html 200`), `frontend/scripts/auth-callback-selftest.mjs`(신규), `frontend/package-lock.json`(신규), `.gitignore`(신규).
+- 내용: 로그인 게이트에 권한 안내(LoginGuide)·더하기나무 footer, OAuth 콜백 해시 처리(state 검증·에러 처리·해시 제거), 로그인 시 `prompt=consent` + `include_granted_scopes=true`, `saveTokenFromCallbackHash` 반환값 boolean → `CallbackResult` 변경, `isGoogleClientConfigured()` 추가. Google 공식 동의 화면은 흉내 내지 않음.
+- 충돌 없음: 로그인 외 파일(Worker·migration·api.ts·google-client.ts·local-store.ts·token-store.ts)은 브랜치와 동일해서 건드리지 않음.
+- 주의: `saveTokenFromCallbackHash` 반환 타입이 바뀌어, 옛 boolean 사용처가 있으면 수정 필요 (현재 코드베이스에는 없음). selftest는 실제 함수를 import하지 않고 로직 복사본을 테스트함.

@@ -1,10 +1,34 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
-import { createAuthProvider } from "./auth-seam";
+import { createAuthProvider, saveTokenFromCallbackHash } from "./auth-seam";
 import "./styles.css";
 
-// 로그인 Provider는 그록 소유. 여기서는 팩토리로 받아 App에 주입한다.
+const NOTICE_KEY = "naite.login.notice";
+
+/** /auth/callback SPA 진입: 해시 토큰 → sessionStorage, 해시는 비우고 `/`로 이동. */
+function consumeOAuthCallback(): void {
+  const path = window.location.pathname.replace(/\/$/, "") || "/";
+  if (path !== "/auth/callback") return;
+  const result = saveTokenFromCallbackHash(window.location.hash);
+  if (!result.ok) {
+    try {
+      sessionStorage.setItem(NOTICE_KEY, result.error);
+    } catch {
+      /* ignore */
+    }
+  } else {
+    try {
+      sessionStorage.removeItem(NOTICE_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+  history.replaceState(null, "", "/");
+}
+
+consumeOAuthCallback();
+
 const auth = createAuthProvider();
 
 createRoot(document.getElementById("root") as HTMLElement).render(
@@ -12,3 +36,5 @@ createRoot(document.getElementById("root") as HTMLElement).render(
     <App auth={auth} />
   </StrictMode>,
 );
+
+export { NOTICE_KEY };
