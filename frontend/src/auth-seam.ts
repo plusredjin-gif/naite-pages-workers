@@ -114,11 +114,17 @@ export function createRealAuthProvider(): AuthProvider {
         redirect_uri: redirectUri,
         response_type: "token",
         scope: [
-          // Drive 전체 읽기·쓰기: 원본 memoaeb가 Drive memo 폴더에 만든
-          // 메모 파일을 Pages 앱에서도 읽으려면 drive.file(앱이 만든 파일만)
-          // 로는 안 보인다. memo 폴더 외의 파일은 앱이 열지 않는다.
-          "https://www.googleapis.com/auth/drive",
-          "https://www.googleapis.com/auth/calendar",
+          // 심사받기 쉽게 최소 범위만 요청한다 (2026-11-10 jin 결정).
+          //  - drive.file: 이 앱이 만들거나 사용자가 직접 열어준 파일만.
+          //    제한된 범주인 drive(전체)는 쓰지 않는다. 원본 앱 메모는
+          //    Drive 파일 선택기(Picker)로 사용자가 직접 골라 가져온다.
+          //    앱은 memo 폴더 외의 파일은 열지 않는다.
+          //  - calendar.events: 일정 생성·조회·삭제에 필요한 최소 범위.
+          //    calendar(전체)는 캘린더 설정·공유까지 포함해서 쓰지 않는다.
+          //  - tasks: 할 일 목록은 이 범위 하나뿐이라 최소 범위다.
+          //  - contacts.readonly: 연락처 검색만. 전체 열거는 하지 않는다.
+          "https://www.googleapis.com/auth/drive.file",
+          "https://www.googleapis.com/auth/calendar.events",
           "https://www.googleapis.com/auth/tasks",
           "https://www.googleapis.com/auth/contacts.readonly",
           "openid",

@@ -466,7 +466,8 @@ button:disabled {
   cursor: pointer;
 }
 
-/* 모바일 새 메모 FAB (원본: FAB 새 메모). 데스크톱에서는 숨김. */
+/* 모바일 새 메모 FAB (원본: FAB 새 메모). 데스크톱에서는 숨김.
+   아래로 스크롤하면 숨기고 위로 올리면 다시 보인다 (카드 내용을 가리지 않게). */
 .fab-new-memo {
   display: none;
   position: fixed;
@@ -483,6 +484,15 @@ button:disabled {
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   z-index: 20;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.fab-new-memo.fab-hidden {
+  transform: translateY(88px);
+  opacity: 0;
+  pointer-events: none;
 }
 
 @media (max-width: 640px) {
@@ -491,7 +501,9 @@ button:disabled {
   }
   .app-main {
     padding: 12px;
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    /* FAB(56px) + 간격(16px) + 여유분: 마지막 카드·페이지네이션이 FAB 아래로
+       들어가지 않고 완전히 위로 올라오게 한다. */
+    padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -918,4 +930,82 @@ button:disabled {
   .title-controls {
     gap: 8px;
   }
+  /* 모바일 제목 잘림 수정: 제목은 한 줄로 전부 보이고, 전체 기간·최근
+     수정순 선택은 아래 줄로 내린다. 제목이 좁아져 "전체 …"로 잘리지 않게
+     제목 줄을 감싸고 제목은 줄바꿈 없이 한 줄로 둔다. */
+  .title-row {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+  .title-row h1 {
+    flex: 1 0 auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .title-row .title-controls {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* —— 개인정보처리방침 페이지 (/privacy) —— */
+.privacy-page {
+  max-width: 720px;
+}
+
+.privacy-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.privacy-page h1 {
+  font-size: 24px;
+  margin: 12px 0 4px;
+}
+
+.privacy-page h2 {
+  font-size: 17px;
+  margin: 24px 0 8px;
+}
+
+.privacy-page ul {
+  padding-left: 20px;
+  line-height: 1.7;
+}
+
+.privacy-page p {
+  line-height: 1.7;
+}
+
+/* —— Drive 파일 선택기 가져오기 —— */
+.picker-import {
+  margin-top: 12px;
+}
+
+.picker-import .toolbar {
+  margin: 8px 0;
+}
+
+.picker-key-setup {
+  margin-top: 12px;
+}
+
+.picker-key-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.picker-key-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fff;
 }

@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, type Category, type MemoPreview } from "../api";
 import { Teapot } from "../components/Logo";
 import { LineIcon } from "../components/LineIcon";
+import { DrivePickerImport } from "../components/DrivePickerImport";
 import {
   PERIODS,
   filterToListParams,
@@ -149,6 +150,7 @@ export function GridView(props: {
             <button type="button" onClick={() => void handleDriveImport()} disabled={importing}>
               {importing ? "가져오는 중…" : "Drive에서 가져오기"}
             </button>
+            <DrivePickerImport onDone={setNotice} onReload={() => void load()} />
           </div>
         </div>
       ) : null}

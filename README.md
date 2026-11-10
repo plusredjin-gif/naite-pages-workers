@@ -113,7 +113,7 @@ Google OAuth를 하므로, jin의 Google 계정으로 OAuth 클라이언트를 �
 1. https://console.cloud.google.com/ 접속 (나이테에 쓸 Google 계정으로 로그인).
 2. 프로젝트 선택/생성 (예: `naite`).
 3. **API 및 서비스 → 라이브러리**에서 사용 설정: Google Drive API, Google Calendar API, Google Tasks API, People API.
-4. **API 및 서비스 → OAuth 동의 화면**: 앱 이름 `나이테`, 사용자 유형 외부, 테스트 모드 유지 (테스트 사용자에 본인 계정 추가). 범위: `drive`(Drive 전체 읽기·쓰기 — 원본 앱이 만든 메모 파일까지 가져오려면 필요), `calendar`, `tasks`, `contacts`(People API 읽기).
+4. **API 및 서비스 → OAuth 동의 화면**: 앱 이름 `나이테`, 사용자 유형 외부, 테스트 모드 유지 (테스트 사용자에 본인 계정 추가). 범위(최소 범위, 2026-11-10 심사 대응): `drive.file`(이 앱이 만든 파일 + 사용자가 파일 선택기로 열어준 파일만), `calendar.events`(일정만), `tasks`, `contacts.readonly`(People API 읽기). 제한된 범주인 `drive`(전체)와 `calendar`(전체)는 쓰지 않는다. 심사 제출 자료는 `docs/VERIFICATION.md` 참조.
 5. **사용자 인증 정보 → 사용자 인증 정보 만들기 → OAuth 클라이언트 ID → 웹 애플리케이션**:
    - 승인된 자바스크립트 원본: `https://naite.plustree.net`
    - 승인된 리디렉션 URI: `https://naite.plustree.net/auth/callback` (브라우저 콜백 — Worker 콜백이 아니다. 그록 구현 시 최종 확정)
@@ -244,6 +244,7 @@ naite-pages-workers/
   7. **빈 화면**: 메모가 0개일 때 "Drive에서 가져오기" 버튼을 빈 화면에도 추가.
 - 동의 안내(LoginGuide)·문서(`docs/GOOGLE_CONSENT_GUIDE.md`, `docs/LOGIN_SEAM.md`, README 8절)의 범위 설명도 `drive` 전체로 업데이트. Worker는 미사용 보관 상태라 건드리지 않음.
 - **주의**: OAuth 동의 화면의 범위(스코프) 변경은 Google Cloud 콘솔에서 동의 화면 범위에 `drive`가 등록돼 있어야 동의가 뜬다. 이미 `drive.file`로 동의한 계정은 다시 로그인해야 새 범위가 적용된다.
+- **18절에서 뒤집힘**: 2026-11-10 jin 결정으로 심사받기 쉽게 `drive`(전체) 범위를 제거하고 `drive.file`로 되돌렸다. 원본 메모 가져오기는 Drive 파일 선택기(Picker)로 사용자가 직접 고르는 방식으로 바꿨다. 14절의 전체 범위 결정은 폐기.
 
 ## 15. 원본 레이아웃으로 맞추기 — 사이드바 섹션·제목 줄·보기 pill·온톨로지 통합 (2026-11-10)
 
@@ -289,3 +290,26 @@ naite-pages-workers/
 - 검증 (jsdom + esbuild IIFE mock 빌드, 데모 데이터 동일): pill 5개 전부 원형 SVG + 단어, 사이드바 16개 행 전부 원형 SVG·이모지 0건, 카테고리 아이콘 선택 18개 전부 원형 SVG, 카테고리 목록 7개 전부 원형 SVG, 사람 화면 이동 정상, 편집기 도구 모음 5개 전부 라인 SVG·이모지 0건, JS 에러 0건.
 - 빌드: `tsc --noEmit` + Vite 통과 (JS 300.18KB). 배포: Pages `plustree-memo` 직접 업로드, 배포 `14875db8`. 확인: `naite.plustree.net`·`memo.plustree.net`·`plustree-memo.pages.dev` 모두 새 번들(`index-DzGE7sTR.js`) 서빙.
 - 남은 것: 목록 가상 스크롤·체크리스트 하위 할일·일정 삭제·알림·장소 검색 API 키·키워드 추출 품질 차이는 13절과 동일하게 미이식.
+
+## 18. 심사받기 쉽게 만들기 — 최소 범위·Picker·개인정보처리방침 (2026-11-10)
+
+- jin 결정: Google OAuth 심사를 받기 쉽게 만들 것. 14절의 `drive`(전체) 범위 결정을 뒤집는다.
+- **권한 축소** (`frontend/src/auth-seam.ts`, `LoginGuide.tsx`, `docs/`):
+  1. `drive`(전체, 제한된 범주) → `drive.file`(이 앱이 만든 파일 + 사용자가 파일 선택기로 열어준 파일만).
+  2. `calendar`(전체) → `calendar.events`(일정 생성·조회·삭제만).
+  3. `tasks`, `contacts.readonly`, `openid`, `email`, `profile`은 그대로 (최소 범위).
+  4. 기존 전체(`drive`) 범위 토큰은 만료 시까지 동작하고, 만료 후 다시 로그인하면 새 범위로 동의받는다. App 첫 로그인 스코프 검사는 `drive.file` 또는 `drive` 중 하나라도 있으면 통과.
+- **Drive 파일 선택기(Picker) 가져오기** (`frontend/src/drive-picker.ts` 신규, `frontend/src/components/DrivePickerImport.tsx` 신규, `frontend/src/api.ts`에 `drive.importPickedFiles`·`drive.importPickedFolder` 추가):
+  1. drive.file은 원본 memoaeb 메모를 직접 볼 수 없으므로, 사용자가 Drive 파일 선택기에서 memo JSON 파일(여러 개) 또는 memo 폴더를 직접 고르면 가져온다. Picker로 연 파일은 drive.file 권한으로 읽을 수 있다.
+  2. Picker에는 Google API 키가 필요하다. 빌드 시 `VITE_GOOGLE_API_KEY`로 넣거나 설정 화면에서 저장(localStorage `naite.google.api_key.v1`). 키가 없으면 설정 안내를 보여준다. API 키는 콘솔에서 HTTP 리퍼러 제한(naite.plustree.net 등)을 걸어 만든다.
+  3. 배치 위치: 격자 보기 빈 화면 + 설정 화면 Google Drive 섹션. 원본 앱에서 Drive 동기화를 먼저 눌러 memo 파일을 Drive에 올리라는 안내 문구를 함께 둔다.
+  4. 폴더를 골랐는데 안에 JSON이 없으면 파일 직접 선택으로 안내한다.
+- **개인정보처리방침** (`frontend/src/views/PrivacyView.tsx` 신규, `main.tsx`에서 `/privacy` 공개 라우트, 푸터에 링크):
+  1. URL: https://naite.plustree.net/privacy (로그인 없이 열림, SPA 폴백 `/* /index.html 200`으로 서빙).
+  2. 내용: 수집 항목(계정 기본 정보·메모·Drive memo 파일·연락한 일정·할 일·연락처 검색·장소·위치), 수집 목적, 저장 위치(사용자 본인 Drive + 브라우저 로컬 저장소, 나이테 서버에 저장하지 않음), 제3자 제공 없음, 보관 기간(삭제할 때까지), 이용자 권리(앱 내 삭제·Drive 파일 삭제·권한 취소), 쿠키·추적 없음, 문의 plustree@googlegroups.com, 시행일 2026-11-10. 한국어 전문 + 영문 요약 포함.
+- **심사 제출 자료** (`docs/VERIFICATION.md` 신규): 앱 정보(도메인·연락처·원본·리디렉션 URI), 요청 범위 표 + 영문 사용 이유, 쓰지 않는 범위(`drive` 전체·`calendar` 전체), 데모 영상 촬영 대본(2~3분), 심사 제출 체크리스트(jin 콘솔 작업 포함).
+- **모바일 수정 2건** (jin 모바일 스크린샷, 같은 빌드에 포함):
+  1. **제목 잘림**: 모바일(640px 이하)에서 제목 줄이 좁아져 "전체 메모"가 "전체 …"로 잘림. `.title-row`를 감싸게 하고 제목은 한 줄로 전부 보이게, 전체 기간·최근 수정순 선택은 아래 줄 오른쪽으로 내림 (`styles.css`).
+  2. **새 메모 + 버튼 가림**: 모바일 FAB(주황 + 버튼)가 메모 카드 날짜·Drive 저장 표시를 가림. 아래로 스크롤하면 FAB이 숨고 위로 올리면 다시 보이게 (`App.tsx` 스크롤 감지 + `.fab-hidden`), 모바일 하단 여백을 96px → 140px로 늘림.
+- **원본 기준 재확인**: 도메인 버전이 원본 memoaeb v32와 똑같이 보이는 게 최종 목표. 모바일에서도 원본 구조(사이드바 보기·카테고리·키워드·장소 섹션, 상단 로고 옆 검색창, 제목 줄 + 기간·정렬, 보기 pill 줄, 메모 격자 카드)가 그대로 보이게 한다. 사이드바는 모바일에서 아이콘 행으로 접히지만 내용·순서는 원본과 같다.
+- 빌드·배포·확인 (2026-11-10): `tsc --noEmit` + Vite 통과 (JS 310.24KB, 번들에 클라이언트 ID 인라인·`drive.file`/`calendar.events` 포함, 전체 `drive`·`calendar` 범위 요청 없음 — 기존 전체 범위 토큰 허용용 읽기 전용 검사 1건만 남음). 배포: Pages `plustree-memo` 직접 업로드, 배포 `1227d8e8`. 확인: `naite.plustree.net`·`memo.plustree.net`·`plustree-memo.pages.dev` 모두 새 번들(`index-BU-QHLsv.js`) 서빙, 라이브 번들 MD5가 로컬 빌드와 일치. `/privacy` 페이지 라이브 확인(한국어 전문 + 영문 요약 전부 표시). 로그인 안내 크롤은 캐시로 옛날 문구가 보였으나 라이브 번들 직접 확인으로 새 문구(`drive.file`·파일 선택기) 포함 확인. Picker 실제 동작은 Google API 키가 없어서 jin 키 등록 후 확인 필요.

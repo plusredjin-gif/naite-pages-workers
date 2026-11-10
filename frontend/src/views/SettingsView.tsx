@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api";
 import { CategoryManager } from "./CategoryManager";
+import { DrivePickerImport } from "../components/DrivePickerImport";
 import "./SettingsView.css";
 
 const TOKEN_EXPIRED_CODE = "TOKEN_EXPIRED_RELOGIN_REQUIRED";
@@ -194,8 +195,11 @@ export function SettingsView(props: {
             </div>
             <p className="meta">
               동기화는 수동으로만 합니다. Drive에서 바뀐 메모만 가져오고, 전체 가져오기는
-              memo 폴더의 모든 메모 파일을 로컬로 복원합니다.
+              memo 폴더의 모든 메모 파일을 로컬로 복원합니다. 이 앱은 drive.file
+              범위라 원본 앱이 만든 파일은 직접 볼 수 없습니다. 원본 메모는 아래
+              파일 선택기로 직접 골라 가져오세요.
             </p>
+            <DrivePickerImport onDone={setNotice} onReload={() => void load()} />
           </>
         ) : (
           <p className="meta">Drive 상태를 불러오지 못했습니다.</p>

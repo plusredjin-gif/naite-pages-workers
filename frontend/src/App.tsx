@@ -94,8 +94,11 @@ export function App(props: { auth: AuthProvider }) {
   const [showConsent, setShowConsent] = useState(false);
   /** 상단 검색창 (원본: 로고 옆 검색창 — 모든 보기에서 공유). */
   const [search, setSearch] = useState("");
-  /** Drive 전체 읽기 권한이 없는 기존 토큰이면 다시 로그인 안내. */
+  /** Drive 권한이 없는 토큰이면 다시 로그인 안내. */
   const [needRelogin, setNeedRelogin] = useState(false);
+  /** 모바일 새 메모 FAB: 아래로 스크롤하면 숨기고 위로 올리면 다시 보인다
+   *  (카드 날짜·Drive 저장 표시를 가리지 않게). */
+  const [fabHidden, setFabHidden] = useState(false);
   /** 첫 로그인 자동 가져오기는 세션당 한 번만. */
   const autoImportDone = useRef(false);
   /** 사이드바 필터 (원본: 보기·카테고리·키워드 섹션에서 고른 값). */
@@ -154,19 +157,42 @@ export function App(props: { auth: AuthProvider }) {
     void loadSidebar();
   }, [session, view, loadSidebar]);
 
+  // 모바일 FAB 스크롤 감지: 아래로 스크롤하면 숨기고, 위로 올리면 다시 보인다.
+  useEffect(() => {
+    let lastY = window.scrollY;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        setFabHidden(y > lastY && y > 120);
+        lastY = y;
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   // 첫 로그인 시: 로컬 메모가 비어 있으면 Drive memo 폴더에서 자동 가져오기.
-  // 원본 memoaeb 메모가 Drive에 있으면 여기서 로컬로 복원된다.
+  // drive.file 범위라 이 앱이 만든 파일만 보인다. 원본 memoaeb 메모는
+  // Picker(설정·빈 화면의 "Drive에서 파일 선택")로 직접 골라 가져온다.
   useEffect(() => {
     if (!session || autoImportDone.current) return;
     autoImportDone.current = true;
     void (async () => {
-      // 기존 토큰이 drive.file 범위면 원본 메모 파일이 안 보인다.
+      // Drive 권한이 전혀 없으면 다시 로그인 안내. 기존 전체(drive) 토큰도
+      // 당분간은 그대로 동작한다 (만료 시 drive.file로 다시 동의받는다).
       const scope = loadAccessToken()?.scope ?? "";
       const scopes = scope.split(/\s+/).filter(Boolean);
-      if (!scopes.includes("https://www.googleapis.com/auth/drive")) {
+      const hasDriveScope =
+        scopes.includes("https://www.googleapis.com/auth/drive.file") ||
+        scopes.includes("https://www.googleapis.com/auth/drive");
+      if (!hasDriveScope) {
         setNeedRelogin(true);
         setNotice(
-          "Drive 메모를 가져오려면 Drive 전체 읽기 권한이 필요합니다. 아래 '다시 로그인' 버튼으로 다시 로그인하면 원본 메모를 가져올 수 있습니다. (기존 로그인은 drive.file 범위라 원본 메모 파일이 안 보입니다.)",
+          "Drive 권한이 없습니다. 다시 로그인하면 메모를 Drive에 저장·가져올 수 있습니다.",
         );
         return;
       }
@@ -178,7 +204,9 @@ export function App(props: { auth: AuthProvider }) {
         const result = await api.drive.importAll(false);
         await api.settings.update({ drive_first_import_done: "1" });
         if ((result.total ?? 0) === 0) {
-          setNotice("Drive memo 폴더에 가져올 메모가 없습니다. 새 메모를 만들어보세요.");
+          setNotice(
+            "Drive memo 폴더에 가져올 메모가 없습니다. 원본 나이테 앱의 메모는 설정의 'Drive에서 파일 선택'으로 직접 고르면 가져올 수 있습니다. (먼저 원본 앱에서 Drive 동기화를 눌러 memo 파일을 Drive에 올려주세요.)",
+          );
         } else {
           setNotice(
             `Drive에서 ${result.imported ?? 0}개 메모를 가져왔습니다. (전체 ${result.total ?? 0}개)` +
@@ -488,7 +516,7 @@ export function App(props: { auth: AuthProvider }) {
           </header>
           {needRelogin ? (
             <p className="notice">
-              Drive 메모를 가져오려면 다시 로그인이 필요합니다.{" "}
+              Drive 권한이 없어 다시 로그인이 필요합니다.{" "}
               <button type="button" onClick={() => void handleRelogin()}>
                 다시 로그인
               </button>
@@ -595,7 +623,7 @@ export function App(props: { auth: AuthProvider }) {
       </div>
       <button
         type="button"
-        className="fab-new-memo"
+        className={fabHidden ? "fab-new-memo fab-hidden" : "fab-new-memo"}
         aria-label="새 메모"
         onClick={() => void handleNewMemo()}
       >

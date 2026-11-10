@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { createAuthProvider, saveTokenFromCallbackHash } from "./auth-seam";
+import { PrivacyView } from "./views/PrivacyView";
 import "./styles.css";
 
 const NOTICE_KEY = "naite.login.notice";
@@ -29,11 +30,17 @@ function consumeOAuthCallback(): void {
 
 consumeOAuthCallback();
 
+/** /privacy는 로그인 없이 공개되는 개인정보처리방침 페이지다. */
+const publicPath =
+  typeof window !== "undefined"
+    ? window.location.pathname.replace(/\/$/, "") || "/"
+    : "/";
+
 const auth = createAuthProvider();
 
 createRoot(document.getElementById("root") as HTMLElement).render(
   <StrictMode>
-    <App auth={auth} />
+    {publicPath === "/privacy" ? <PrivacyView /> : <App auth={auth} />}
   </StrictMode>,
 );
 

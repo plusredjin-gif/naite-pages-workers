@@ -20,14 +20,15 @@ export function LoginGuide(props: {
       </p>
       <ul className="guide-list">
         <li>
-          <strong>드라이브</strong> — Drive의 <code>memo</code> 폴더에 있는 메모 파일을 읽고
-          씁니다. 원본 앱에서 만든 메모 파일까지 가져오려면 Drive 읽기·쓰기 권한이
-          필요합니다. 앱은 <code>memo</code> 폴더 외의 파일은 열지 않습니다.
-          메모 동기화·가져오기에 씁니다.
+          <strong>드라이브(<code>drive.file</code>)</strong> — 이 앱이 만들거나 사용자가 직접
+          열어준 <code>memo</code> 폴더의 메모 파일만 읽고 씁니다. 다른 Drive 파일은
+          보지 않습니다. 원본 앱 메모는 Drive 파일 선택기에서 직접 골라
+          가져올 수 있습니다. 메모 동기화·가져오기에 씁니다.
         </li>
         <li>
-          <strong>캘린더·할 일</strong> — 일정·할 일을 나이테에서 연결할 때 필요합니다.
-          (현재 앱이 요청하는 범위는 Drive + 캘린더 + 할 일 + 연락처 읽기입니다.)
+          <strong>캘린더 일정(<code>calendar.events</code>)·할 일(<code>tasks</code>)</strong> —
+          메모에 연결한 일정·할 일을 만들고 확인할 때만 씁니다. 캘린더
+          설정·공유에는 접근하지 않습니다.
         </li>
         <li>
           <strong>연락처 읽기(<code>contacts.readonly</code>)</strong> — 검색에만 쓰며 연락처 전체를
@@ -66,6 +67,7 @@ export function PlusTreeFooter() {
       <a href="https://www.plustree.net/" target="_blank" rel="noopener noreferrer">
         by 더하기나무
       </a>
+      <a href="/privacy">개인정보처리방침</a>
       <span>Pages-only · Drive 동기화는 버튼으로 수동 실행</span>
     </footer>
   );

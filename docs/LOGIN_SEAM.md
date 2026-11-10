@@ -61,7 +61,9 @@
 - 토큰 만료 시 에러 코드: `TOKEN_EXPIRED_RELOGIN_REQUIRED` (401 상당).
   자동 갱신은 없다. 사용자가 다시 로그인해야 한다.
 - OAuth 동의 화면·범위는 jin이 맨 마지막에 만들 Google OAuth 클라이언트에 달려 있다.
-  범위: `drive`(Drive 전체 읽기·쓰기 — 원본 memoaeb가 만든 메모 파일까지 읽으려면 필요. 앱은 memo 폴더 외의 파일은 열지 않는다), `calendar`, `tasks`, `contacts.readonly`, `openid`, `email`, `profile`.
+  범위: `drive.file`(이 앱이 만든 파일 + 사용자가 파일 선택기로 열어준 파일만),
+  `calendar.events`(일정만), `tasks`, `contacts.readonly`, `openid`, `email`, `profile`.
+  제한된 범주인 `drive`(전체)는 심사 때문에 쓰지 않는다 (2026-11-10).
   Redirect URI: `https://naite.plustree.net/auth/callback` (브라우저 콜백 — Worker 콜백이 아니다.
   최종 경로는 그록 구현 시 확정한다.)
 

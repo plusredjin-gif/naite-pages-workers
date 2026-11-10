@@ -2,10 +2,10 @@
  * 나이테 Pages-only — 브라우저 직접 Google API 호출 (google-client.ts)
  *
  * Worker 중계가 없어졌으므로, 프론트엔드가 Google API를 브라우저에서 직접 부른다.
- *  - Drive API v3: memo 폴더 파일 CRUD (Drive 전체 읽기·쓰기 범위.
- *    원본 memoaeb가 Drive memo 폴더에 만든 메모 파일까지 읽으려면
- *    drive.file(앱이 만든 파일만)로는 안 보여서 전체 범위를 쓴다.
- *    앱은 memo 폴더 외의 파일은 열지 않는다.)
+ *  - Drive API v3: memo 폴더 파일 CRUD (drive.file 범위 — 이 앱이 만들거나
+ *    사용자가 파일 선택기(Picker)로 직접 열어준 파일만. 제한된 범주인
+ *    drive(전체)는 심사 때문에 쓰지 않는다. 앱은 memo 폴더 외의
+ *    파일은 열지 않는다.)
  *  - Calendar API v3: 일정 생성·조회
  *  - Tasks API v1: 할일 목록·동기화
  *  - People API v1: 연락처 검색 (searchContacts만, 전체 열거 없음)

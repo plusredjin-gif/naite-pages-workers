@@ -998,6 +998,49 @@ export const api = {
       }
       return { ok: true, folderId, total: files.length, imported, errors };
     },
+    /**
+     * Picker로 고른 메모 파일들을 로컬로 가져온다.
+     * drive.file 범위에서는 사용자가 Picker로 직접 열어준 파일만 읽을 수
+     * 있다. 원본 memoaeb 메모를 가져오는 경로다.
+     */
+    importPickedFiles: async (ids: string[]) => {
+      let imported = 0;
+      const errors: Array<{ file: string; error: string }> = [];
+      for (const id of ids) {
+        try {
+          const parsed = await driveDownloadJson<DriveMemoFile>(tokenProvider, id);
+          mutate((s) => {
+            upsertMemoFromDrive(s, parsed, id);
+          });
+          imported++;
+        } catch (e) {
+          errors.push({ file: id, error: String(e) });
+        }
+      }
+      return { ok: true, total: ids.length, imported, errors };
+    },
+    /**
+     * Picker로 고른 폴더 안의 메모 JSON을 가져온다.
+     * 폴더를 Picker로 열어주면 그 안의 파일 목록을 읽을 수 있다.
+     * 목록이 비면 파일 직접 선택으로 안내한다 (호출부 메시지 참조).
+     */
+    importPickedFolder: async (folderId: string) => {
+      const files = await driveListMemoFiles(tokenProvider, folderId);
+      let imported = 0;
+      const errors: Array<{ file: string; error: string }> = [];
+      for (const f of files) {
+        try {
+          const parsed = await driveDownloadJson<DriveMemoFile>(tokenProvider, f.id);
+          mutate((s) => {
+            upsertMemoFromDrive(s, parsed, f.id);
+          });
+          imported++;
+        } catch (e) {
+          errors.push({ file: f.name ?? f.id ?? "", error: String(e) });
+        }
+      }
+      return { ok: true, folderId, total: files.length, imported, errors };
+    },
     /** 메모 1개를 Drive memo 폴더 파일로 올린다 (1메모=1파일). 수동 저장이다. */
     pushMemo: async (memoId: string) => {
       const state = loadState();
