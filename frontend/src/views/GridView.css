@@ -1,0 +1,46 @@
+/* 격자 카드 보기 전용 */
+.memo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.memo-card .memo-preview {
+  flex: 1;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.memo-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.memo-card-cat {
+  color: #666;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memo-card-foot .memo-date {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.cat-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pin-mark {
+  font-size: 13px;
+}

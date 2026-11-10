@@ -1,0 +1,60 @@
+/* 장소 뷰 전용 스타일 (공통 클래스는 styles.css 사용) */
+.places-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.places-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 4px;
+  border-top: 1px solid #eee;
+}
+
+.places-row:first-child {
+  border-top: none;
+}
+
+.places-row.selected {
+  background: #f5e9d8;
+  border-radius: 8px;
+}
+
+.places-name {
+  font-weight: 700;
+}
+
+.places-select {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+}
+
+.places-memo-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-bottom: 8px;
+}
+
+.places-memo-row .memo-item {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.places-map iframe {
+  display: block;
+  width: 100%;
+  height: 320px;
+  border: 0;
+}

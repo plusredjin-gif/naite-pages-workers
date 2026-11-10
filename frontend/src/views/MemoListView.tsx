@@ -14,13 +14,14 @@ export function MemoListView(props: {
   onNeedLogin: () => void;
   notice: string | null;
   setNotice: (msg: string | null) => void;
+  /** 상단 검색창과 공유하는 검색어 (원본: 로고 옆 검색창). */
+  search: string;
 }) {
-  const { onOpen, onNeedLogin, notice, setNotice } = props;
+  const { onOpen, onNeedLogin, notice, setNotice, search } = props;
   const [memos, setMemos] = useState<MemoPreview[]>([]);
   const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryId, setCategoryId] = useState<string>("");
-  const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const LIMIT = 30;
@@ -43,6 +44,11 @@ export function MemoListView(props: {
       setNotice(`목록을 불러오지 못했습니다: ${e instanceof Error ? e.message : String(e)}`);
     }
   }, [categoryId, search, offset, setNotice]);
+
+  // 상단 검색어가 바뀌면 첫 페이지부터 다시 불러온다.
+  useEffect(() => {
+    setOffset(0);
+  }, [search]);
 
   useEffect(() => {
     void load();
@@ -83,15 +89,6 @@ export function MemoListView(props: {
   return (
     <div>
       <div className="toolbar">
-        <input
-          type="search"
-          placeholder="메모 검색"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setOffset(0);
-          }}
-        />
         <select
           value={categoryId}
           onChange={(e) => {

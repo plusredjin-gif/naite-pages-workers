@@ -1,0 +1,24 @@
+/* 랜딩 히어로 뷰 전용 스타일 */
+
+.hero-view .naite-logo {
+  margin-bottom: 12px;
+}
+
+.hero-view .naite-logo .naite-word {
+  font-size: 32px;
+}
+
+.hero-view .naite-logo .naite-ko {
+  font-size: 28px;
+}
+
+@media (max-width: 640px) {
+  /* 모바일에서는 기능 카드의 설명 문구를 숨기고 제목만 보여준다. */
+  .hero-view .feature-card p {
+    display: none;
+  }
+
+  .hero-view .feature-card h3 {
+    margin-bottom: 0;
+  }
+}

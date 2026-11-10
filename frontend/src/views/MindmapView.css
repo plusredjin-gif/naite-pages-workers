@@ -1,0 +1,7 @@
+/* 마인드맵 뷰 전용 스타일 */
+
+.graph-tools input[type="search"] {
+  padding: 8px;
+  font-size: 14px;
+  min-width: 180px;
+}

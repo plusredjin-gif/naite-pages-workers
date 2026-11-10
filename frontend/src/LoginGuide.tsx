@@ -20,12 +20,14 @@ export function LoginGuide(props: {
       </p>
       <ul className="guide-list">
         <li>
-          <strong>드라이브(<code>drive.file</code>)</strong> — 이 앱이 만들거나 사용자가 연 파일만
-          다룹니다. 다른 Drive 폴더를 마음대로 열어보지 않습니다. 메모 동기화·가져오기에 씁니다.
+          <strong>드라이브</strong> — Drive의 <code>memo</code> 폴더에 있는 메모 파일을 읽고
+          씁니다. 원본 앱에서 만든 메모 파일까지 가져오려면 Drive 읽기·쓰기 권한이
+          필요합니다. 앱은 <code>memo</code> 폴더 외의 파일은 열지 않습니다.
+          메모 동기화·가져오기에 씁니다.
         </li>
         <li>
           <strong>캘린더·할 일</strong> — 일정·할 일을 나이테에서 연결할 때 필요합니다.
-          (현재 앱이 요청하는 범위는 Drive 파일 + 캘린더 + 할 일 + 연락처 읽기입니다.)
+          (현재 앱이 요청하는 범위는 Drive + 캘린더 + 할 일 + 연락처 읽기입니다.)
         </li>
         <li>
           <strong>연락처 읽기(<code>contacts.readonly</code>)</strong> — 검색에만 쓰며 연락처 전체를

@@ -1,0 +1,63 @@
+/* 아웃라인 보기 전용 */
+.outline-tree {
+  margin-top: 4px;
+}
+
+.outline-node {
+  margin-bottom: 2px;
+}
+
+.outline-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 8px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.outline-toggle:hover {
+  background: #f0ede4;
+}
+
+.outline-arrow {
+  width: 16px;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.outline-cat-icon {
+  flex-shrink: 0;
+}
+
+.outline-cat-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.outline-body {
+  padding-left: 8px;
+}
+
+.outline-memo-list {
+  margin: 4px 0 8px;
+}
+
+.outline-more {
+  margin: 0 0 12px 8px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+}
+
+.outline-uncategorized {
+  border-top: 1px solid #e5e5e5;
+  margin-top: 8px;
+  padding-top: 4px;
+}

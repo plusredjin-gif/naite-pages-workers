@@ -300,10 +300,16 @@ export const api = {
   },
 
   memos: {
-    list: async (params?: { categoryId?: string; search?: string; from?: string; to?: string; sort?: string; limit?: number; offset?: number }) => {
+    list: async (params?: { categoryId?: string; search?: string; from?: string; to?: string; sort?: string; limit?: number; offset?: number; pinned?: boolean }) => {
       const state = loadState();
       let memos = [...state.memos];
-      if (params?.categoryId) memos = memos.filter((m) => m.categoryId === params.categoryId);
+      if (params?.categoryId === "__none__") {
+        // 미분류만: 카테고리가 없는 메모.
+        memos = memos.filter((m) => m.categoryId === null);
+      } else if (params?.categoryId) {
+        memos = memos.filter((m) => m.categoryId === params.categoryId);
+      }
+      if (params?.pinned) memos = memos.filter((m) => m.pinned === 1);
       if (params?.search) {
         const q = params.search.trim();
         memos = memos.filter(
@@ -437,6 +443,107 @@ export const api = {
       });
       return { ok: true, ...result };
     },
+    /** 메모의 위치 메타데이터·온톨로지 위치 연결을 지운다 (위치 노드 자체는 남는다). */
+    clearGeo: async (memoId: string) => {
+      mutate((state) => {
+        state.memoLocations = state.memoLocations.filter((l) => l.memoId !== memoId);
+      });
+      return { ok: true };
+    },
+    /** 메모에 사람을 연결·해제한다. */
+    linkPerson: async (memoId: string, personId: string) => {
+      mutate((state) => {
+        if (!state.memos.some((m) => m.id === memoId) || !state.people.some((p) => p.id === personId)) {
+          throw new Error("not_found");
+        }
+        if (!state.memoPeople.some((l) => l.memoId === memoId && l.personId === personId)) {
+          state.memoPeople.push({ memoId, personId });
+        }
+      });
+      return { ok: true };
+    },
+    unlinkPerson: async (memoId: string, personId: string) => {
+      mutate((state) => {
+        state.memoPeople = state.memoPeople.filter((l) => !(l.memoId === memoId && l.personId === personId));
+      });
+      return { ok: true };
+    },
+    /** 메모에 장소를 연결·해제한다. */
+    linkPlace: async (memoId: string, placeId: string) => {
+      mutate((state) => {
+        if (!state.memos.some((m) => m.id === memoId) || !state.places.some((p) => p.id === placeId)) {
+          throw new Error("not_found");
+        }
+        if (!state.memoPlaces.some((l) => l.memoId === memoId && l.placeId === placeId)) {
+          state.memoPlaces.push({ memoId, placeId });
+        }
+      });
+      return { ok: true };
+    },
+    unlinkPlace: async (memoId: string, placeId: string) => {
+      mutate((state) => {
+        state.memoPlaces = state.memoPlaces.filter((l) => !(l.memoId === memoId && l.placeId === placeId));
+      });
+      return { ok: true };
+    },
+    /** 메모에 키워드를 직접 추가·제거한다 (자동 추출과 별개). */
+    addKeyword: async (memoId: string, name: string) => {
+      if (!name.trim()) throw new Error("name_required");
+      const id = mutate((state) => {
+        if (!state.memos.some((m) => m.id === memoId)) throw new Error("not_found");
+        const kid = getOrCreateKeywordId(state, name.trim());
+        if (!state.memoKeywords.some((l) => l.memoId === memoId && l.keywordId === kid)) {
+          state.memoKeywords.push({ memoId, keywordId: kid });
+        }
+        return kid;
+      });
+      return { id };
+    },
+    removeKeyword: async (memoId: string, keywordId: string) => {
+      mutate((state) => {
+        state.memoKeywords = state.memoKeywords.filter((l) => !(l.memoId === memoId && l.keywordId === keywordId));
+      });
+      return { ok: true };
+    },
+    /**
+     * 마크다운·HTML 가져오기: 붙여넣은 텍스트를 블록으로 바꿔 메모 끝에 추가한다.
+     * `- [ ]`/`- [x]`는 체크리스트, `#` 제목·일반 줄은 단락, 빈 줄은 건너뛴다.
+     * HTML은 태그를 벗기고 줄 단위로 나눈 뒤 같은 규칙으로 처리한다.
+     */
+    importText: async (memoId: string, text: string, format: "markdown" | "html") => {
+      if (!text.trim()) throw new Error("empty_text");
+      const plain =
+        format === "html"
+          ? text
+              .replace(/<(br|p|div|li|h[1-6])[^>]*>/gi, "\n")
+              .replace(/<[^>]+>/g, "")
+              .replace(/&nbsp;/g, " ")
+              .replace(/&amp;/g, "&")
+              .replace(/&lt;/g, "<")
+              .replace(/&gt;/g, ">")
+          : text;
+      const lines = plain.split("\n").map((l) => l.trim()).filter(Boolean);
+      let added = 0;
+      mutate((state) => {
+        const m = state.memos.find((x) => x.id === memoId);
+        if (!m) throw new Error("not_found");
+        let pos = m.blocks.reduce((acc, b) => Math.max(acc, b.position), -1);
+        for (const line of lines) {
+          const todo = line.match(/^[-*]\s*\[( |x|X)\]\s*(.*)$/);
+          if (todo) {
+            pos += 1;
+            m.blocks.push({ id: uid(), position: pos, type: "todo", text: todo[2], checked: todo[1].toLowerCase() === "x" ? 1 : 0, attachmentId: null, dueDate: null });
+          } else {
+            const heading = line.match(/^#{1,6}\s+(.*)$/);
+            pos += 1;
+            m.blocks.push({ id: uid(), position: pos, type: "paragraph", text: heading ? heading[1] : line.replace(/^[-*]\s+/, ""), checked: 0, attachmentId: null, dueDate: null });
+          }
+          added += 1;
+        }
+        m.updatedAt = nowIso();
+      });
+      return { ok: true, added };
+    },
   },
 
   blocks: {
@@ -488,6 +595,31 @@ export const api = {
       if (!name.trim()) throw new Error("name_required");
       const id = mutate((state) => getOrCreateKeywordId(state, name.trim()));
       return { id };
+    },
+    /** 키워드 이름 변경. */
+    rename: async (id: string, name: string) => {
+      if (!name.trim()) throw new Error("name_required");
+      const found = mutate((state) => {
+        const k = state.keywords.find((x) => x.id === id);
+        if (!k) return false;
+        k.name = name.trim();
+        return true;
+      });
+      if (!found) throw new Error("not_found");
+      return { ok: true };
+    },
+    /** 키워드 노드 삭제. 상위 간선·관련 링크·메모 태그도 함께 지운다 (메모 본문은 유지). */
+    remove: async (id: string) => {
+      const found = mutate((state) => {
+        if (!state.keywords.some((k) => k.id === id)) return false;
+        state.keywords = state.keywords.filter((k) => k.id !== id);
+        state.keywordParents = state.keywordParents.filter((e) => e.keywordId !== id && e.parentId !== id);
+        state.keywordLinks = state.keywordLinks.filter((e) => e.keywordId !== id && e.relatedId !== id);
+        state.memoKeywords = state.memoKeywords.filter((l) => l.keywordId !== id);
+        return true;
+      });
+      if (!found) throw new Error("not_found");
+      return { ok: true };
     },
     addParent: async (keywordId: string, parentId: string, locked = false) => {
       const ok = mutate((state) => {
@@ -906,6 +1038,13 @@ export const api = {
         });
       });
       return { id, url: uploaded.webViewLink };
+    },
+
+    /** 첨부 1건 조회: 사진·음성 블록이 다시 열릴 때 Drive 링크를 보여주기 위해. */
+    get: async (id: string) => {
+      const att = loadState().attachments.find((a) => a.id === id);
+      if (!att) throw new Error("not_found");
+      return { id: att.id, url: att.url, mime: att.mime, size: att.size };
     },
   },
 

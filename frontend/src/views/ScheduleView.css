@@ -1,0 +1,111 @@
+/* 일정(캘린더·할일) 뷰 전용 스타일 — 공통 클래스는 styles.css를 쓴다. */
+
+.schedule-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.schedule-form h2 {
+  margin: 0 0 4px;
+}
+
+.schedule-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: #555;
+}
+
+.schedule-form input[type="text"],
+.schedule-form input[type="date"],
+.schedule-form input[type="time"],
+.schedule-form select {
+  padding: 8px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.schedule-form .form-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.schedule-form .form-row > label {
+  flex: 1;
+  min-width: 140px;
+}
+
+.schedule-form label.check-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding-bottom: 8px;
+}
+
+.schedule-day-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.schedule-event {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.schedule-time {
+  font-size: 13px;
+  color: #666;
+  white-space: nowrap;
+  min-width: 96px;
+}
+
+.schedule-title {
+  font-weight: 700;
+  flex: 1;
+  min-width: 120px;
+}
+
+.task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.task-check {
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.task-title {
+  flex: 1;
+  min-width: 120px;
+}
+
+.task-done .task-title {
+  text-decoration: line-through;
+  color: #999;
+}

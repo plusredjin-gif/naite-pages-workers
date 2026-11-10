@@ -1,0 +1,90 @@
+/* 분석 대시보드 뷰 전용 스타일 */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.stat-grid .card {
+  margin-bottom: 0;
+}
+
+.stat-card {
+  text-align: center;
+}
+
+.stat-num {
+  font-size: 26px;
+  font-weight: 800;
+  color: #6b4a2f;
+}
+
+.bar-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bar-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bar-label {
+  min-width: 90px;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-track {
+  flex: 1;
+  height: 12px;
+  background: #f0ede4;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  background: #c2571b;
+  border-radius: 999px;
+}
+
+.bar-value {
+  min-width: 24px;
+  text-align: right;
+  font-size: 13px;
+  color: #666;
+}
+
+.prompt-box {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #fafaf5;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.json-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  font-size: 13px;
+  font-family: ui-monospace, "Malgun Gothic", monospace;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}

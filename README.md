@@ -113,7 +113,7 @@ Google OAuth를 하므로, jin의 Google 계정으로 OAuth 클라이언트를 �
 1. https://console.cloud.google.com/ 접속 (나이테에 쓸 Google 계정으로 로그인).
 2. 프로젝트 선택/생성 (예: `naite`).
 3. **API 및 서비스 → 라이브러리**에서 사용 설정: Google Drive API, Google Calendar API, Google Tasks API, People API.
-4. **API 및 서비스 → OAuth 동의 화면**: 앱 이름 `나이테`, 사용자 유형 외부, 테스트 모드 유지 (테스트 사용자에 본인 계정 추가). 범위: `drive.file`, `calendar`, `tasks`, `contacts`(People API 읽기).
+4. **API 및 서비스 → OAuth 동의 화면**: 앱 이름 `나이테`, 사용자 유형 외부, 테스트 모드 유지 (테스트 사용자에 본인 계정 추가). 범위: `drive`(Drive 전체 읽기·쓰기 — 원본 앱이 만든 메모 파일까지 가져오려면 필요), `calendar`, `tasks`, `contacts`(People API 읽기).
 5. **사용자 인증 정보 → 사용자 인증 정보 만들기 → OAuth 클라이언트 ID → 웹 애플리케이션**:
    - 승인된 자바스크립트 원본: `https://naite.plustree.net`
    - 승인된 리디렉션 URI: `https://naite.plustree.net/auth/callback` (브라우저 콜백 — Worker 콜백이 아니다. 그록 구현 시 최종 확정)
@@ -172,7 +172,7 @@ naite-pages-workers/
 | Worker 크론 동기화 (`worker/src/sync.ts`) | **미사용(보관용)** — Pages-only 미지원 |
 | D1 스키마 0001·0002 | **미사용(보관용)** — 로컬 저장소로 대체 |
 | 프론트엔드 API 경계 (`frontend/src/api.ts` 등) | **완료 (Pages-only로 교체)** — 로컬 저장소 + Google API 직접 호출 |
-| 프론트엔드 화면 이식 (Vite 앱·UI) | **부분 완료** — 메모 목록·편집기 구현, 빌드·타입체크 통과 (아래 참조). 나머지 화면은 체크리스트로 남음 |
+| 프론트엔드 화면 이식 (Vite 앱·UI) | **이식 완료 (2026-11-10, 13절)** — 원본(memoaeb) 전 화면을 Pages 정적판으로 이식: 히어로·동의·격자·목록·아웃라인·마인드맵·온톨로지·분석·일정·사람·장소·설정·편집기(업그레이드). 빌드·타입체크 통과, Pages 재배포 완료. 일부 원본 기능은 Pages-only 한계로 미이식 (13절 참조) |
 | 마이그레이션 계획 | **갱신 완료** (Drive → 로컬 저장소). 실행은 OAuth 연결 후 앱 안에서 |
 | 도메인 전환 절차서 | **갱신 완료** (Pages-only). 실행은 전환 조건 충족 후 |
 | Worker 배포 (`wrangler deploy`) | **하지 않음** — Pages-only에서는 폐기 |
@@ -196,3 +196,51 @@ naite-pages-workers/
 - 빌드·배포: `tsc --noEmit` + Vite 빌드 통과 (JS 184.93KB, 번들에 클라이언트 ID 포함 확인). Pages 배포 `d7b6b43f` success (2026-11-09 23:28 UTC).
 - 확인 (2026-11-10): `naite.plustree.net`·`memo.plustree.net` 모두 새 앱 서빙, 로그인 안내(LoginGuide) 화면에서 "클라이언트 ID가 아직 없습니다" 안내가 사라짐 → `isGoogleClientConfigured()=true`, "Google로 로그인" 버튼 활성화 상태. 배포된 JS 번들에 클라이언트 ID 인라인 확인. 실제 Google 로그인 완료까지는 테스트하지 않음 (jin이 직접).
 - 리디렉션: 로그인 버튼을 누르면 `https://accounts.google.com/o/oauth2/v2/auth`로 이동, `redirect_uri`는 접속 도메인 기준 `https://naite.plustree.net/auth/callback` (코드상 `window.location.origin + "/auth/callback"`). **주의: Google Cloud 콘솔에 해당 리디렉션 URI와 승인된 자바스크립트 원본(`https://naite.plustree.net`)이 등록돼 있어야 로그인이 성공한다.** 콘솔 등록 여부는 여기서 확인할 수 없으니, 로그인 시 `redirect_uri_mismatch` 오류가 나면 콘솔 설정을 먼저 확인할 것. `memo.plustree.net`에서 로그인하면 리디렉션 URI가 `https://memo.plustree.net/auth/callback`이 되므로, 그 도메인으로 로그인하려면 콘솔에 해당 URI도 등록해야 한다.
+
+## 13. 원본 풀스택 이식 — 전 화면 Pages 정적판으로 (2026-11-10, jin 방향 정정)
+
+- jin 확인 (2026-11-10): 원본 풀스택 나이테(memoaeb, v32)에 로그인만 넣는 게 아니라, 원본 화면·기능을 Pages 배포판에 그대로 옮기는 게 맞다. 메모 목록·편집기만 있던 부분 완성 상태에서 전 화면 이식으로 방향 정정.
+- 원본 기능 목록: `artifact.inspect` (inspection_id `7fdc40a9-32d9-44ad-9a59-88f4bf22055d`)로 소스 기준 전수 확인 — 5개 주 보기(격자·목록·아웃라인·마인드맵·온톨로지·분석 통합) + 4개 왼쪽 메뉴 보기(일정·사람·장소·설정) + 3개 모달/관리 화면(카테고리·키워드 관리·가져오기). 서버 액션 57개는 에이전트 브리지 구조라 화면만 옮길 수 없어, Google 연동·동기화 실행 주체를 브라우저 직접 호출로 다시 설계함 (`frontend/src/api.ts`·`google-client.ts`).
+
+### 이식된 것
+- **히어로·동의**: 원본 헤드라인 '생각나는 순간, 바로 남기는 메모', 주전자 drawing 캐릭터(이젤 앞에서 붓으로 로고 그리는 장면), 시연용 예시 카드 3종, 기능 소개 10개. 로그인 전 히어로 → 동의 안내(LoginGuide) 2단계.
+- **브랜드 자산 (원본 그대로 복사)**: `naite-logo.png`(손그림 동심원 결 + 붓글씨 naite), 한글 '나이테'(테만 주황 #e8590c), 주전자 7종(drawing/wave/laugh/good/sleep/best/cheer) + 6초 영상, 더하기나무 로고는 하단 푸터에만(plustree.net 링크). 한컴 말랑말랑체(눈누 미러 jsDelivr CDN, Regular/Bold).
+- **격자 보기**: 제목 줄 순서 [전체 기간 → 최근 수정순], 파스텔 MemoCard(키워드/사람/장소/위치 칩·카테고리 경로·수정일·할 일 n/m·Drive 배지), 30개씩 더 보기.
+- **목록 보기**: 기존 목록 뷰 유지(검색·카테고리 필터·30개씩 페이징). 가상 스크롤은 미이식(아래 참조).
+- **아웃라인**: 카테고리>하위>메모 접힌 트리, 고정됨·미분류 포함, 카테고리별 20개씩 더 보기, 검색 시 해당 경로 자동 펼침.
+- **마인드맵**: 카테고리 트리(depth 1 펼침, 메모 10개 초과 묶음 노드), 줌·100%·가운데로·미니맵·노드 검색 이동, 메모 노드→편집기.
+- **온톨로지·분석 (하나의 메뉴, 탭 전환)**: 허브(키워드·사람·장소·위치)×메모 다대다 그래프(신장 트리+점선 추가 간선), 종류·관계·깊이 1~2단계 토글, 중심 노드 이웃 표시, 상세 패널, 키워드 관리(상위 다중 선택·관련 연결·잠금 토글). 분석 대시보드: 통계 4개(전체 연결·연결된 메모·중심 키워드·고립 메모), 중심 키워드 상위 5개, AI 프롬프트 생성·복사, 키워드 관계도·사람 장소 위치 시간 관계도, 고립 메모 목록, AI JSON 왕복(붙여넣기→미리보기→적용→적용 기록 되돌리기).
+- **일정**: 캘린더 아젠다 30일 날짜별 그룹, 마지막 불러오기 시각, 일정 불러오기, 일정 만들기(메모 연결), 할 일 목록 조회·동기화.
+- **사람**: 연락처 검색 후보 최대 10명·개별 등록(전체 가져오기 없음), 등록한 사람 목록·연결 메모 수·필터, 직접 추가.
+- **장소**: Google 지도 embed(키 없이 `output=embed`)·열기/길찾기 링크, 장소 목록·상세·연결 메모, 메모를 쓴 위치 목록. 좌표 없는 장소는 지도 제외. 원본의 HatchMaps 런타임 대신 Google embed 사용(대체).
+- **설정**: 계정·Drive(memo 폴더·Drive 전체 범위)·동기화(상태·마지막 시각·지금 동기화·Drive에서 불러오기)·캘린더/Tasks/연락처/장소/현재 위치 토글·카테고리 관리.
+- **편집기 (업그레이드)**: 제목·쓰기/미리보기(MD 간이 렌더링)·고정·삭제 2단계·새 메모 빈 단락 1개, 블록 이동·삭제, 체크리스트 마감일·Tasks 동기화 버튼, 사진 첨부(Drive 업로드·표시), 음성 블록(MediaRecorder 녹음·Drive 저장·재생), 말해서 단락 추가(Web Speech API ko-KR), 일정 패널(날짜·시간·종일→캘린더 생성, 이 메모의 일정 표시), 키워드 칩+추가·삭제, 사람·장소 연결, 현재 위치 저장·지우기, 카테고리·카드 색상 7종, 가져오기 모달(md/txt/html 파일·붙여넣기), 빈 새 메모 닫으면 자동 삭제.
+- **api.ts 추가**: 사람·장소 연결(linkPerson/unlinkPerson/linkPlace/unlinkPlace), 위치 지우기(clearGeo), 키워드 추가·삭제(addKeyword/removeKeyword), 마크다운·HTML 가져오기(importText), 키워드 삭제·이름변경(keywords.remove/rename), 첨부 1건 조회(attachments.get — 사진·음성 블록 재표시용).
+
+### 아직 안 된 것 (솔직 정리)
+- **목록 보기 가상 스크롤**: 원본 VirtualMemoList 대신 30개씩 페이징 유지. 메모가 많으면 페이지 이동이 필요.
+- **체크리스트 하위 할 일**: 원본의 하위 할일 구조는 로컬 저장소 모델에 없어 미이식. 마감일·Tasks 동기화는 있음.
+- **일정 삭제·알림**: 원본은 '이 메모의 일정' 목록·삭제·알림이 있으나, Pages api에 일정 삭제·알림 파라미터가 없어 미이식. 삭제는 Google 캘린더에서 직접 해야 함.
+- **장소 검색 API 키**: 장소 검색(geocoding)은 `VITE_GOOGLE_MAPS_API_KEY`가 없어 미동작 — 이름만 직접 추가 가능. 키를 쓰려면 Google Cloud 콘솔에서 키 발급 + HTTP 리퍼러 제한 후 빌드 시점에 주입해야 함.
+- **키워드 자동 추출 품질**: 원본은 서버 모델 추론, Pages-only판은 브라우저 로컬 규칙 기반 추출이라 품질이 다를 수 있음.
+- **동기화·알림**: Drive 수동 버튼만(자동 백업·백그라운드 동기화·실시간 알림 없음 — Pages-only 구조 한계). access_token(약 1시간) 만료마다 재로그인.
+- **바이너리 에셋 GitHub 미반영**: 스냅샷 푸시는 UTF-8 텍스트만 가능해서 `frontend/public/assets/`의 PNG·MP4·HatchMaps JS는 GitHub에 올라가지 않음. Pages 배포(로컬 dist 직접 업로드)에는 포함돼 정상 동작하지만, 저장소만 새로 받으면 로고·주전자 이미지가 없음. 필요하면 별도 경로로 올려야 함.
+
+### 빌드·배포·확인 (2026-11-10)
+- 빌드: `VITE_GOOGLE_CLIENT_ID=551200708040-kanrdsov8059e2rt41hrif52tk63i75f.apps.googleusercontent.com npm run build` — `tsc --noEmit` + Vite 통과 (JS 285.43KB, CSS 14.46KB, 번들에 클라이언트 ID 인라인 확인).
+- 배포: Pages `plustree-memo` 직접 업로드, 배포 `b1362bf9` (2026-11-09 23:43 UTC, 22개 파일).
+- 확인: `naite.plustree.net`·`memo.plustree.net` 모두 새 JS 번들(`index-UiDz_r8B.js`)을 서빙 — 로컬 빌드와 MD5 일치(`8025551b3be75d3cc471b3a1e90c5303`), 번들에 클라이언트 ID 포함. 새 배포 URL 크롤에서 새 히어로 확인(실제 로고·원본 헤드라인·drawing 주전자·예시 카드 3종·기능 10개). 로고·주전자 이미지 200 확인.
+- 로그인 버튼: 히어로 "Google로 로그인" → 동의 안내 → 동의 안내의 "Google로 로그인" 버튼은 `isGoogleClientConfigured()=true`라 활성화 상태(비활성화 조건은 클라이언트 ID 미설정뿐). 실제 Google 로그인 완료까지는 테스트하지 않음 — jin이 직접. `redirect_uri_mismatch`가 나면 12절의 콘솔 등록(리디렉션 URI·JS 원본) 확인.
+
+## 14. 원본과 맞추기 — Drive 가져오기·검색·카테고리 칩·키워드 메뉴 (2026-11-10)
+
+- jin 지시: "개발한거와 다르네 개발된 것으로 업데이트 해줘" — 배포판이 원본과 달라 보인다는 지적. 원본(memoaeb v32)과 배포판 대조 결과, 고친 것:
+  1. **메모 0개 (데이터)**: 배포판이 요청하던 `drive.file` 범위는 "이 앱이 만든 파일만" 볼 수 있어서, 원본 앱이 Drive memo 폴더에 만든 메모 파일이 안 보였다. 요청 범위를 `drive`(Drive 전체 읽기·쓰기)로 변경. 앱은 memo 폴더 외의 파일은 열지 않는다. 기존 토큰은 `drive.file` 범위라 원본 메모가 안 보이므로, 로그인 시 스코프를 확인해 부족하면 "다시 로그인" 안내를 띄운다. (재로그인해야 새 범위로 동의받는다.)
+  2. **첫 로그인 자동 가져오기**: 로그인 후 로컬 메모가 비어 있으면 Drive memo 폴더에서 1회 자동 가져오기(`importAll`) 후 결과 알림. 이미 가져온 적 있으면(`drive_first_import_done`) 다시 안 한다. jin의 Drive 데이터를 지우거나 덮어쓰지 않는다 — 읽기 전용 원본에서 로컬로 복원하는 방식.
+  3. **memo 폴더 여러 개 대응**: `drive.file` 시절 Pages 앱이 빈 memo 폴더를 새로 만든 경우가 있어, 이름이 `memo`인 폴더가 여러 개면 메모 JSON 파일이 가장 많은 폴더를 원본으로 쓴다. 파일 목록은 페이지네이션으로 최대 1000개까지 읽는다.
+  4. **상단 검색창**: 원본처럼 헤더(로고 옆)에 검색창을 두고 격자·목록 보기와 공유. 목록 보기의 자체 검색 입력은 제거.
+  5. **카테고리 칩**: 격자 보기에 전체·고정됨·미분류·카테고리 아이콘 칩 줄 추가 (모바일은 아이콘만). `api.memos.list`에 고정됨·미분류(`__none__`) 필터 추가.
+  6. **키워드 메뉴**: 왼쪽 메뉴에 키워드(#) 추가 — 온톨로지 화면의 키워드 관리 카드로 스크롤해 이동한다.
+  7. **빈 화면**: 메모가 0개일 때 "Drive에서 가져오기" 버튼을 빈 화면에도 추가.
+- 동의 안내(LoginGuide)·문서(`docs/GOOGLE_CONSENT_GUIDE.md`, `docs/LOGIN_SEAM.md`, README 8절)의 범위 설명도 `drive` 전체로 업데이트. Worker는 미사용 보관 상태라 건드리지 않음.
+- **주의**: OAuth 동의 화면의 범위(스코프) 변경은 Google Cloud 콘솔에서 동의 화면 범위에 `drive`가 등록돼 있어야 동의가 뜬다. 이미 `drive.file`로 동의한 계정은 다시 로그인해야 새 범위가 적용된다.

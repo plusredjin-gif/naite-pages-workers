@@ -1,0 +1,38 @@
+/* 설정 뷰 전용 스타일 */
+
+.settings-toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.settings-toggle-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-toggle-text p {
+  margin: 2px 0 0;
+}
+
+.settings-toggle {
+  flex-shrink: 0;
+  min-width: 52px;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 999px;
+}
+
+.settings-toggle.on {
+  background: #222;
+  color: #fff;
+  border-color: #222;
+}

@@ -114,7 +114,10 @@ export function createRealAuthProvider(): AuthProvider {
         redirect_uri: redirectUri,
         response_type: "token",
         scope: [
-          "https://www.googleapis.com/auth/drive.file",
+          // Drive 전체 읽기·쓰기: 원본 memoaeb가 Drive memo 폴더에 만든
+          // 메모 파일을 Pages 앱에서도 읽으려면 drive.file(앱이 만든 파일만)
+          // 로는 안 보인다. memo 폴더 외의 파일은 앱이 열지 않는다.
+          "https://www.googleapis.com/auth/drive",
           "https://www.googleapis.com/auth/calendar",
           "https://www.googleapis.com/auth/tasks",
           "https://www.googleapis.com/auth/contacts.readonly",

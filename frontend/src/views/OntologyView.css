@@ -1,0 +1,5 @@
+/* 온톨로지 뷰 전용 스타일 */
+
+.memo-list .memo-item {
+  cursor: pointer;
+}

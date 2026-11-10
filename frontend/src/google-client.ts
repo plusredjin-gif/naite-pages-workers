@@ -2,7 +2,10 @@
  * 나이테 Pages-only — 브라우저 직접 Google API 호출 (google-client.ts)
  *
  * Worker 중계가 없어졌으므로, 프론트엔드가 Google API를 브라우저에서 직접 부른다.
- *  - Drive API v3: memo 폴더 파일 CRUD (drive.file 범위 — 앱이 만든 파일만 접근)
+ *  - Drive API v3: memo 폴더 파일 CRUD (Drive 전체 읽기·쓰기 범위.
+ *    원본 memoaeb가 Drive memo 폴더에 만든 메모 파일까지 읽으려면
+ *    drive.file(앱이 만든 파일만)로는 안 보여서 전체 범위를 쓴다.
+ *    앱은 memo 폴더 외의 파일은 열지 않는다.)
  *  - Calendar API v3: 일정 생성·조회
  *  - Tasks API v1: 할일 목록·동기화
  *  - People API v1: 연락처 검색 (searchContacts만, 전체 열거 없음)
@@ -108,9 +111,27 @@ export async function driveFindMemoFolder(provider: TokenProvider): Promise<stri
   );
   const data = await googleFetchJson<{ files?: Array<{ id?: string }> }>(
     provider,
-    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&pageSize=1`,
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&pageSize=10`,
   );
-  return data.files?.[0]?.id ?? null;
+  const ids = (data.files ?? []).map((f) => f.id).filter((id): id is string => !!id);
+  if (ids.length === 0) return null;
+  if (ids.length === 1) return ids[0];
+  // memo 폴더가 여러 개면(예: Pages 앱이 빈 폴더를 새로 만든 경우)
+  // 메모 JSON 파일이 가장 많은 폴더를 원본으로 쓴다.
+  let bestId: string = ids[0];
+  let bestCount = -1;
+  for (const id of ids) {
+    try {
+      const files = await driveListMemoFiles(provider, id);
+      if (files.length > bestCount) {
+        bestCount = files.length;
+        bestId = id;
+      }
+    } catch {
+      // 한 폴더 조회가 실패해도 다른 폴더는 계속 확인한다.
+    }
+  }
+  return bestId;
 }
 
 export async function driveEnsureMemoFolder(provider: TokenProvider): Promise<string | null> {
@@ -133,11 +154,20 @@ export async function driveListMemoFiles(
   folderId: string,
 ): Promise<DriveFileMeta[]> {
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-  const data = await googleFetchJson<{ files?: DriveFileMeta[] }>(
-    provider,
-    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime,mimeType)&pageSize=100`,
-  );
-  return (data.files ?? []).filter(
+  const out: DriveFileMeta[] = [];
+  let pageToken: string | undefined;
+  // 메모가 100개를 넘으면 다음 페이지까지 이어서 읽는다 (최대 1000개).
+  for (let page = 0; page < 10; page++) {
+    const tokenParam = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : "";
+    const data = await googleFetchJson<{ files?: DriveFileMeta[]; nextPageToken?: string }>(
+      provider,
+      `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime,mimeType),nextPageToken&pageSize=100${tokenParam}`,
+    );
+    out.push(...(data.files ?? []));
+    pageToken = data.nextPageToken;
+    if (!pageToken) break;
+  }
+  return out.filter(
     (f) => f.mimeType === "application/json" || f.name.endsWith(".json"),
   );
 }

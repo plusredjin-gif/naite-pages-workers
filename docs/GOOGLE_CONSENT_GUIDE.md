@@ -12,7 +12,7 @@ Google 공식 동의 화면(accounts.google.com)을 흉내 내지 않습니다.
 
 ## 요청 범위 (현재)
 
-- `drive.file` — 이 앱이 만들거나 연 파일만
+- `drive` — Drive `memo` 폴더의 메모 파일 읽기·쓰기 (원본 앱이 만든 메모 파일까지 가져오기 위해 전체 범위 사용. 앱은 `memo` 폴더 외의 파일은 열지 않음)
 - `calendar` / `tasks` — 일정·할 일 연결
 - `contacts.readonly` — 연락처 검색만 (전체 열거 없음)
 - `openid` `email` `profile` — 세션 표시용 userinfo
