@@ -337,6 +337,7 @@ export function App(props: { auth: AuthProvider }) {
               className={filterActive("all") ? "active" : ""}
               onClick={() => pickFilter({ kind: "all" })}
             >
+              <span className="nav-icon nav-icon-mobile" aria-hidden>▦</span>
               <span className="nav-label">전체 메모</span>
               <span className="nav-count">{sidebar.total}</span>
             </button>
@@ -345,6 +346,7 @@ export function App(props: { auth: AuthProvider }) {
               className={filterActive("pinned") ? "active" : ""}
               onClick={() => pickFilter({ kind: "pinned" })}
             >
+              <span className="nav-icon nav-icon-mobile" aria-hidden>📌</span>
               <span className="nav-label">고정됨</span>
             </button>
             <button
@@ -352,6 +354,7 @@ export function App(props: { auth: AuthProvider }) {
               className={filterActive("uncategorized") ? "active" : ""}
               onClick={() => pickFilter({ kind: "uncategorized" })}
             >
+              <span className="nav-icon nav-icon-mobile" aria-hidden>📁</span>
               <span className="nav-label">미분류</span>
             </button>
             <button
@@ -533,7 +536,7 @@ export function App(props: { auth: AuthProvider }) {
                     onClick={() => goMain(item.key)}
                   >
                     <span className="pill-icon" aria-hidden>{item.icon}</span>
-                    <span>{item.label}</span>
+                    <span className="pill-label">{item.label}</span>
                   </button>
                 ))}
               </div>
