@@ -274,3 +274,18 @@ naite-pages-workers/
 - 빌드: `tsc --noEmit` + Vite 통과 (JS 292.36KB). 배포: Pages `plustree-memo` 직접 업로드, 배포 `c551967e`. 확인: `naite.plustree.net`·`memo.plustree.net`·`plustree-memo.pages.dev` 모두 새 번들(`index-C4RLsUAk.js`) 서빙, 라이브 JS에 `view-chips`/`cat-chips` 없음.
 - 주의: jin 스크린샷이 구 번들 캐시일 수 있다 — 새 버전 확인은 강력 새로고침(캐시 비우기) 후에 해달라고 전달.
 - 열린 점: 편집기 하단 도구 모음은 아이콘+단어 버튼 그대로 둠. 원본 19:42 규칙은 44px 원형 아이콘 버튼인데 이번 지시(pill+단어 방향)와 달라 건드리지 않음 — jin이 편집기 도구 모음도 원본처럼 원형 아이콘으로 바꾸길 원하면 별도로.
+
+## 17. 동그란 라인 아이콘 일관 적용 + 말랑말랑체 폰트 (2026-11-10)
+
+- jin 정정 (2026-11-10): 동그란 라인 아이콘 디자인이 좋다. 16절에서 유니코드·이모지 아이콘으로 바꾼 방향을 되돌리고, 동그란 원형 라인 아이콘 스타일을 유지해 앱 전체에 일관되게 적용한다.
+- **라인 아이콘** (`frontend/src/components/LineIcon.tsx` 신규): 24×24 viewBox, fill 없음, stroke currentColor, 두께 2의 SVG 라인 아이콘 31종 (격자·목록·아웃라인·마인드맵·온톨로지·전체·고정·폴더·사람·장소·해시·캘린더·서류가방·전구·펜·별·집·나무·카메라·음악·체크·검색·메시지·책·차·설정·다운로드·로그아웃·더하기·텍스트·이미지·마이크·태그). `.round-icon` 배지: 30px 원형 테두리(1.5px, currentColor) + 안쪽 17px 라인 SVG. 사이드바는 28px.
+- **일관 적용한 곳**:
+  1. 보기 전환 pill 5개: 원형 아이콘 + 단어 (데스크톱), lg 미만(1023px)에서는 단어 숨김 → 아이콘만 (모바일 버튼 패딩 축소).
+  2. 사이드바 메뉴 16개 행: 보기(전체·고정됨·미분류·사람·장소·키워드·일정) + 카테고리 7개 + 키워드 + 장소 — 전부 원형 라인 아이콘 + 단어. 모바일 아이콘 행에서는 아이콘만.
+  3. 카테고리 칩: 카테고리 관리 아이콘 선택 18종을 원형 라인 아이콘으로, 목록 행도 원형 라인 아이콘. 저장된 이모지 값(💼 👤 💡 …)은 데이터 그대로 두고 그릴 때만 `categoryIconFor()`로 라인 아이콘으로 바꾼다 (데이터 마이그레이션 없음).
+  4. 사람·장소·일정: 사이드바 해당 행 + 편집기 사람·장소 연결 칩(라인 아이콘 + 이름).
+  5. 그 외 일관성: 편집기 도구 모음 5개(단락·체크리스트·사진·음성메모·일정)·고정 토글·일정 표시를 라인 아이콘 + 단어로, 격자·목록·아웃라인 고정 표시(📌)를 라인 핀 아이콘으로, 마인드맵 노드 아이콘(📝📁📂)을 노드 안 라인 아이콘으로, 아웃라인 미분류 아이콘을 원형 라인 아이콘으로.
+- **폰트** (jin 추가 요청): 앱 전체 기본 폰트는 한컴 말랑말랑체. 이미 `styles.css`에 `@font-face`(Regular/Bold, 눈누 미러 jsDelivr CDN woff2, `font-display: swap`)와 `body{font-family: HancomMalangMalang, system-ui, -apple-system, Malgun Gothic, sans-serif}`가 있었고, 이번에 woff2 CDN 로드를 직접 확인함 — Regular 200 (1,029,116 bytes), Bold 200 (1,056,372 bytes), 둘 다 `font/woff2`. 빌드 CSS에 @font-face·body 폰트·폴백 체인 포함 확인. 유일한 예외는 AI JSON 입력란(`.json-input`)의 monospace로, 코드 입력란이라 의도적으로 유지.
+- 검증 (jsdom + esbuild IIFE mock 빌드, 데모 데이터 동일): pill 5개 전부 원형 SVG + 단어, 사이드바 16개 행 전부 원형 SVG·이모지 0건, 카테고리 아이콘 선택 18개 전부 원형 SVG, 카테고리 목록 7개 전부 원형 SVG, 사람 화면 이동 정상, 편집기 도구 모음 5개 전부 라인 SVG·이모지 0건, JS 에러 0건.
+- 빌드: `tsc --noEmit` + Vite 통과 (JS 300.18KB). 배포: Pages `plustree-memo` 직접 업로드, 배포 `14875db8`. 확인: `naite.plustree.net`·`memo.plustree.net`·`plustree-memo.pages.dev` 모두 새 번들(`index-DzGE7sTR.js`) 서빙.
+- 남은 것: 목록 가상 스크롤·체크리스트 하위 할일·일정 삭제·알림·장소 검색 API 키·키워드 추출 품질 차이는 13절과 동일하게 미이식.

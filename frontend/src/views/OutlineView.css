@@ -31,10 +31,6 @@
   flex-shrink: 0;
 }
 
-.outline-cat-icon {
-  flex-shrink: 0;
-}
-
 .outline-cat-name {
   overflow: hidden;
   text-overflow: ellipsis;

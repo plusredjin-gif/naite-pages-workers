@@ -18,6 +18,7 @@ import { type AuthProvider, type Session, isGoogleClientConfigured } from "./aut
 import { loadAccessToken } from "./token-store";
 import { LoginGuide, PlusTreeFooter } from "./LoginGuide";
 import { NaiteLogo } from "./components/Logo";
+import { RoundIcon, categoryIconFor, type LineIconName } from "./components/LineIcon";
 import { HeroView } from "./views/HeroView";
 import { MemoListView } from "./views/MemoListView";
 import { MemoEditorView } from "./views/MemoEditorView";
@@ -56,13 +57,14 @@ type View = { name: MainView } | { name: "editor"; memoId: string };
 
 const NOTICE_KEY = "naite.login.notice";
 
-/** 본문 보기 전환 pill 줄 (원본: 격자·목록·아웃라인·마인드맵·온톨로지·분석). */
-const MEMO_PILLS: Array<{ key: MainView; label: string; icon: string }> = [
-  { key: "grid", label: "격자", icon: "▦" },
-  { key: "list", label: "목록", icon: "☰" },
-  { key: "outline", label: "아웃라인", icon: "⋮≡" },
-  { key: "mindmap", label: "마인드맵", icon: "✦" },
-  { key: "ontology", label: "온톨로지·분석", icon: "◉" },
+/** 본문 보기 전환 pill 줄 (원본: 격자·목록·아웃라인·마인드맵·온톨로지·분석).
+ *  아이콘은 동그란 원형 라인 아이콘 (jin 결정) — 유니코드·이모지 아님. */
+const MEMO_PILLS: Array<{ key: MainView; label: string; icon: LineIconName }> = [
+  { key: "grid", label: "격자", icon: "grid" },
+  { key: "list", label: "목록", icon: "list" },
+  { key: "outline", label: "아웃라인", icon: "outline" },
+  { key: "mindmap", label: "마인드맵", icon: "mindmap" },
+  { key: "ontology", label: "온톨로지·분석", icon: "ontology" },
 ];
 
 const PILL_VIEWS: MainView[] = ["grid", "list", "outline", "mindmap", "ontology"];
@@ -337,7 +339,7 @@ export function App(props: { auth: AuthProvider }) {
               className={filterActive("all") ? "active" : ""}
               onClick={() => pickFilter({ kind: "all" })}
             >
-              <span className="nav-icon nav-icon-mobile" aria-hidden>▦</span>
+              <RoundIcon name="inbox" />
               <span className="nav-label">전체 메모</span>
               <span className="nav-count">{sidebar.total}</span>
             </button>
@@ -346,7 +348,7 @@ export function App(props: { auth: AuthProvider }) {
               className={filterActive("pinned") ? "active" : ""}
               onClick={() => pickFilter({ kind: "pinned" })}
             >
-              <span className="nav-icon nav-icon-mobile" aria-hidden>📌</span>
+              <RoundIcon name="pin" />
               <span className="nav-label">고정됨</span>
             </button>
             <button
@@ -354,7 +356,7 @@ export function App(props: { auth: AuthProvider }) {
               className={filterActive("uncategorized") ? "active" : ""}
               onClick={() => pickFilter({ kind: "uncategorized" })}
             >
-              <span className="nav-icon nav-icon-mobile" aria-hidden>📁</span>
+              <RoundIcon name="folder" />
               <span className="nav-label">미분류</span>
             </button>
             <button
@@ -362,7 +364,7 @@ export function App(props: { auth: AuthProvider }) {
               className={currentMain === "people" ? "active" : ""}
               onClick={() => goMain("people")}
             >
-              <span className="nav-icon" aria-hidden>👤</span>
+              <RoundIcon name="user" />
               <span className="nav-label">사람</span>
             </button>
             <button
@@ -370,7 +372,7 @@ export function App(props: { auth: AuthProvider }) {
               className={currentMain === "places" ? "active" : ""}
               onClick={() => goMain("places")}
             >
-              <span className="nav-icon" aria-hidden>📍</span>
+              <RoundIcon name="mapPin" />
               <span className="nav-label">장소</span>
             </button>
             <button
@@ -378,7 +380,7 @@ export function App(props: { auth: AuthProvider }) {
               className={currentMain === "ontology" ? "active" : ""}
               onClick={() => goKeywords()}
             >
-              <span className="nav-icon" aria-hidden>#</span>
+              <RoundIcon name="hash" />
               <span className="nav-label">키워드</span>
             </button>
             <button
@@ -386,7 +388,7 @@ export function App(props: { auth: AuthProvider }) {
               className={currentMain === "schedule" ? "active" : ""}
               onClick={() => goMain("schedule")}
             >
-              <span className="nav-icon" aria-hidden>📅</span>
+              <RoundIcon name="calendar" />
               <span className="nav-label">일정</span>
             </button>
           </nav>
@@ -405,7 +407,7 @@ export function App(props: { auth: AuthProvider }) {
                   className={filterActive("category", c.id) ? "active" : ""}
                   onClick={() => pickFilter({ kind: "category", id: c.id, name: c.name })}
                 >
-                  <span className="nav-icon" aria-hidden>{c.icon ?? "📁"}</span>
+                  <RoundIcon name={categoryIconFor(c.icon)} />
                   <span className="nav-label">{c.name}</span>
                 </button>
                 {subCategories(c.id).map((s) => (
@@ -415,7 +417,7 @@ export function App(props: { auth: AuthProvider }) {
                     className={`side-sub${filterActive("category", s.id) ? " active" : ""}`}
                     onClick={() => pickFilter({ kind: "category", id: s.id, name: s.name })}
                   >
-                    <span className="nav-icon" aria-hidden>{s.icon ?? "📁"}</span>
+                    <RoundIcon name={categoryIconFor(s.icon)} />
                     <span className="nav-label">{s.name}</span>
                   </button>
                 ))}
@@ -437,7 +439,7 @@ export function App(props: { auth: AuthProvider }) {
                 className={filterActive("keyword", k.id) ? "active" : ""}
                 onClick={() => pickFilter({ kind: "keyword", id: k.id, name: k.name })}
               >
-                <span className="nav-icon" aria-hidden>#</span>
+                <RoundIcon name="hash" />
                 <span className="nav-label">{k.name}</span>
               </button>
             ))}
@@ -447,7 +449,7 @@ export function App(props: { auth: AuthProvider }) {
           <nav className="side-nav" aria-label="장소">
             {sidebar.places.map((p) => (
               <button key={p.id} type="button" onClick={() => goMain("places")}>
-                <span className="nav-icon" aria-hidden>📍</span>
+                <RoundIcon name="mapPin" />
                 <span className="nav-label">{p.name}</span>
               </button>
             ))}
@@ -535,7 +537,7 @@ export function App(props: { auth: AuthProvider }) {
                     className={currentMain === item.key ? "active" : ""}
                     onClick={() => goMain(item.key)}
                   >
-                    <span className="pill-icon" aria-hidden>{item.icon}</span>
+                    <RoundIcon name={item.icon} />
                     <span className="pill-label">{item.label}</span>
                   </button>
                 ))}

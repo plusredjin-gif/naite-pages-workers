@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, TOKEN_EXPIRED_CODE, type MemoPreview } from "../api";
+import { LineIcon } from "../components/LineIcon";
 import {
   PERIODS,
   filterToListParams,
@@ -86,7 +87,11 @@ export function MemoListView(props: {
           <li key={m.id}>
             <button className="memo-item" onClick={() => onOpen(m.id)}>
               <span className="memo-title">
-                {m.pinned === 1 ? <span className="pin-mark" title="고정됨">📌 </span> : null}
+                {m.pinned === 1 ? (
+                  <span className="pin-mark" title="고정됨">
+                    <LineIcon name="pin" size={13} />
+                  </span>
+                ) : null}
                 {m.title || "(제목 없음)"}
               </span>
               <span className="memo-preview">{m.preview ?? ""}</span>

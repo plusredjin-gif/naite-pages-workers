@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, TOKEN_EXPIRED_CODE, type Block, type Category, type MemoDetail } from "../api";
+import { LineIcon } from "../components/LineIcon";
 
 /** 카드 색상 7종 (원본). */
 const CARD_COLORS = [
@@ -655,7 +656,10 @@ export function MemoEditorView(props: {
           {preview ? "쓰기" : "미리보기"}
         </button>
         <button type="button" onClick={() => void handleTogglePin()} aria-pressed={memo.pinned === 1}>
-          {memo.pinned === 1 ? "📌 고정됨" : "📍 고정"}
+          <span className="inline-icon">
+            <LineIcon name="pin" size={14} />
+          </span>{" "}
+          {memo.pinned === 1 ? "고정됨" : "고정"}
         </button>
         <button type="button" onClick={() => setImportOpen(true)}>
           가져오기
@@ -746,7 +750,10 @@ export function MemoEditorView(props: {
               <div className="schedule-block">
                 {memo.event ? (
                   <p className="meta">
-                    📅 {new Date(memo.event.startAt).toLocaleString("ko-KR")}~
+                    <span className="inline-icon">
+                      <LineIcon name="calendar" size={13} />
+                    </span>{" "}
+                    {new Date(memo.event.startAt).toLocaleString("ko-KR")}~
                     {new Date(memo.event.endAt).toLocaleString("ko-KR")}
                     {memo.event.allDay === 1 ? " (종일)" : ""}
                   </p>
@@ -774,10 +781,16 @@ export function MemoEditorView(props: {
       {/* 하단 아이콘 도구 모음 (원본: 단락·체크리스트·사진·음성메모·일정) */}
       <div className="toolbar editor-toolbar" role="toolbar" aria-label="블록 추가">
         <button type="button" onClick={() => void handleAddBlock("paragraph")} title="단락 추가">
-          ¶ 단락
+          <span className="inline-icon">
+            <LineIcon name="type" size={15} />
+          </span>{" "}
+          단락
         </button>
         <button type="button" onClick={() => void handleAddBlock("todo")} title="체크리스트 추가">
-          ☑ 체크리스트
+          <span className="inline-icon">
+            <LineIcon name="check" size={15} />
+          </span>{" "}
+          체크리스트
         </button>
         <button
           type="button"
@@ -785,13 +798,22 @@ export function MemoEditorView(props: {
           disabled={uploading}
           title="사진 첨부"
         >
-          🖼 사진
+          <span className="inline-icon">
+            <LineIcon name="image" size={15} />
+          </span>{" "}
+          사진
         </button>
         <button type="button" onClick={() => setVoiceOpen((v) => !v)} title="음성메모">
-          🎙 음성메모
+          <span className="inline-icon">
+            <LineIcon name="mic" size={15} />
+          </span>{" "}
+          음성메모
         </button>
         <button type="button" onClick={() => setScheduleOpen((v) => !v)} title="일정 추가">
-          📅 일정
+          <span className="inline-icon">
+            <LineIcon name="calendar" size={15} />
+          </span>{" "}
+          일정
         </button>
         <input
           ref={photoInputRef}
@@ -902,7 +924,10 @@ export function MemoEditorView(props: {
         <div className="chip-row">
           {memo.people.map((p) => (
             <span key={p.id} className="chip">
-              👤 {p.name}{" "}
+              <span className="inline-icon">
+                <LineIcon name="user" size={13} />
+              </span>{" "}
+              {p.name}{" "}
               <button type="button" aria-label={`${p.name} 연결 해제`} onClick={() => void handleUnlinkPerson(p.id)}>
                 ✕
               </button>
@@ -938,7 +963,10 @@ export function MemoEditorView(props: {
         <div className="chip-row">
           {memo.places.map((p) => (
             <span key={p.id} className="chip">
-              📍 {p.name}{" "}
+              <span className="inline-icon">
+                <LineIcon name="mapPin" size={13} />
+              </span>{" "}
+              {p.name}{" "}
               <button type="button" aria-label={`${p.name} 연결 해제`} onClick={() => void handleUnlinkPlace(p.id)}>
                 ✕
               </button>

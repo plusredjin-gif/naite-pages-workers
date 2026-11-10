@@ -51,8 +51,18 @@
   margin-bottom: 8px;
 }
 
-.catman-icon {
-  font-size: 16px;
+/* 카테고리 아이콘 선택: 동그란 원형 라인 아이콘만 보인다 (jin 결정). */
+.catman-icon-pick .icon-pick {
+  background: none;
+  border: none;
+  padding: 3px;
+  cursor: pointer;
+}
+
+.catman-icon-pick .icon-pick[aria-pressed="true"] .round-icon {
+  border-color: #e8590c;
+  border-width: 2px;
+  background: #fff3e8;
 }
 
 .catman-name {

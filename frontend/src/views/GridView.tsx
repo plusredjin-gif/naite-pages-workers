@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, type Category, type MemoPreview } from "../api";
 import { Teapot } from "../components/Logo";
+import { LineIcon } from "../components/LineIcon";
 import {
   PERIODS,
   filterToListParams,
@@ -113,7 +114,11 @@ export function GridView(props: {
     return (
       <button key={m.id} className="memo-card" onClick={() => onOpen(m.id)}>
         <span className="memo-title">
-          {m.pinned === 1 ? <span className="pin-mark" title="고정됨">📌 </span> : null}
+          {m.pinned === 1 ? (
+            <span className="pin-mark" title="고정됨">
+              <LineIcon name="pin" size={13} />
+            </span>
+          ) : null}
           {m.title || "(제목 없음)"}
         </span>
         <span className="memo-preview">{m.preview ?? ""}</span>

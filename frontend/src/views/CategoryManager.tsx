@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, type Category } from "../api";
 import { Teapot } from "../components/Logo";
+import { RoundIcon, categoryIconFor } from "../components/LineIcon";
 import "./CategoryManager.css";
 
 const ICONS = [
@@ -190,7 +191,7 @@ export function CategoryManager(props: { setNotice: (msg: string | null) => void
       <div key={cat.id} className="catman-node" style={{ marginLeft: depth * 16 }}>
         <div className="card catman-row">
           <span className="cat-dot" style={{ backgroundColor: cat.color ?? "#cccccc" }} />
-          <span className="catman-icon">{cat.icon ?? "📁"}</span>
+          <RoundIcon name={categoryIconFor(cat.icon)} />
           <span className="catman-name">{cat.name}</span>
           <span className="catman-actions">
             <button type="button" onClick={() => startEdit(cat)} disabled={busy}>
@@ -260,16 +261,16 @@ export function CategoryManager(props: { setNotice: (msg: string | null) => void
         </fieldset>
         <fieldset className="catman-field">
           <legend>아이콘</legend>
-          <div className="chip-row" role="radiogroup" aria-label="아이콘">
+          <div className="chip-row catman-icon-pick" role="radiogroup" aria-label="아이콘">
             {ICONS.map((ic) => (
               <button
                 key={ic}
                 type="button"
-                className={`chip${icon === ic ? " active" : ""}`}
+                className="icon-pick"
                 aria-pressed={icon === ic}
                 onClick={() => setIcon(ic)}
               >
-                {ic}
+                <RoundIcon name={categoryIconFor(ic)} />
               </button>
             ))}
           </div>
@@ -280,7 +281,7 @@ export function CategoryManager(props: { setNotice: (msg: string | null) => void
             <option value="">상위 없음 (최상위)</option>
             {parentOptions.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.icon ?? "📁"} {c.name}
+                {c.name}
               </option>
             ))}
           </select>

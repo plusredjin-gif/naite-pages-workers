@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type Category, type MemoPreview } from "../api";
 import { Teapot } from "../components/Logo";
+import { LineIcon } from "../components/LineIcon";
 import "./MindmapView.css";
 
 type MmNode = {
@@ -265,7 +266,7 @@ export function MindmapView(props: {
               const fill = node.kind === "memo" ? "#fdf6e3" : node.kind === "bundle" ? "#f0ede4" : "#ffffff";
               const stroke = isHighlight ? "#c2571b" : node.kind === "bundle" ? "#8a8a8a" : "#b98a4e";
               const expandMark = node.hasChildren ? (expanded.has(node.id) ? "▾ " : "▸ ") : "";
-              const icon = node.kind === "memo" ? "📝 " : node.kind === "bundle" ? "📁 " : "📂 ";
+              const iconName = node.kind === "memo" ? "pen" : node.kind === "bundle" ? "folder" : "tag";
               return (
                 <g
                   key={node.id}
@@ -287,8 +288,11 @@ export function MindmapView(props: {
                     strokeWidth={isHighlight ? 3 : 1.5}
                     strokeDasharray={node.kind === "bundle" ? "5 3" : undefined}
                   />
-                  <text x={10} y={24} fontSize={13} fill="#222">
-                    {truncate(`${expandMark}${icon}${node.label}`, 20)}
+                  <g transform="translate(10, 9)">
+                    <LineIcon name={iconName} size={14} />
+                  </g>
+                  <text x={30} y={24} fontSize={13} fill="#222">
+                    {truncate(`${expandMark}${node.label}`, 18)}
                   </text>
                 </g>
               );
