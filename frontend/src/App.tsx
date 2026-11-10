@@ -1,16 +1,19 @@
 /**
- * 나이테 Pages-only — 앱 진입점
+ * 나이테 Pages-only — 앱 진입점 (원본 memoaeb v32 레이아웃 기준)
  *
- * 원본(memoaeb) 구조를 Pages 정적판으로 이식한 앱 셸:
+ * 원본 구조:
  * - 로그인 전: 히어로(랜딩) → 동의 안내(LoginGuide) 2단계
- * - 로그인 후: 사이드바 내비게이션(격자·목록·아웃라인·마인드맵·온톨로지·분석 /
- *   일정·사람·장소·설정) + 편집기. 모바일은 아이콘 칩 + FAB.
+ * - 로그인 후: 왼쪽 사이드바(보기·카테고리·키워드·장소 섹션) + 본문.
+ *   본문 상단: 로고 옆 메모 검색창. 제목 줄: "전체 메모" 왼쪽 + 전체 기간·
+ *   최근 수정순 오른쪽 같은 줄. 그 아래 보기 전환 pill 줄(격자·목록·아웃라인·
+ *   마인드맵·온톨로지·분석). 온톨로지·분석은 분리된 탭이 아니라 하나의 통합 화면.
+ *   가져오기·설정은 하단 회사 로고 옆으로.
  * 로그인 게이트는 AuthProvider.getSession() 결과로만 분기한다.
  * Google 공식 동의 화면은 흉내 내지 않는다.
  */
 
-import { useEffect, useRef, useState } from "react";
-import { api, configureApiTokenProvider } from "./api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { api, configureApiTokenProvider, type Category } from "./api";
 import { type AuthProvider, type Session, isGoogleClientConfigured } from "./auth-seam";
 import { loadAccessToken } from "./token-store";
 import { LoginGuide, PlusTreeFooter } from "./LoginGuide";
@@ -27,6 +30,15 @@ import { ScheduleView } from "./views/ScheduleView";
 import { PeopleView } from "./views/PeopleView";
 import { PlacesView } from "./views/PlacesView";
 import { SettingsView } from "./views/SettingsView";
+import { CategoryManager } from "./views/CategoryManager";
+import {
+  PERIODS,
+  SORTS,
+  filterLabel,
+  type MemoFilter,
+  type PeriodKey,
+  type SortKey,
+} from "./views/memoFilters";
 
 type MainView =
   | "grid"
@@ -37,14 +49,15 @@ type MainView =
   | "schedule"
   | "people"
   | "places"
-  | "settings";
+  | "settings"
+  | "categories";
 
 type View = { name: MainView } | { name: "editor"; memoId: string };
 
 const NOTICE_KEY = "naite.login.notice";
 
-/** 보기 메뉴 (원본: 격자·목록·아웃라인·마인드맵·온톨로지·분석). */
-const VIEW_NAV: Array<{ key: MainView; label: string; icon: string }> = [
+/** 본문 보기 전환 pill 줄 (원본: 격자·목록·아웃라인·마인드맵·온톨로지·분석). */
+const MEMO_PILLS: Array<{ key: MainView; label: string; icon: string }> = [
   { key: "grid", label: "격자", icon: "▦" },
   { key: "list", label: "목록", icon: "☰" },
   { key: "outline", label: "아웃라인", icon: "⋮≡" },
@@ -52,13 +65,20 @@ const VIEW_NAV: Array<{ key: MainView; label: string; icon: string }> = [
   { key: "ontology", label: "온톨로지·분석", icon: "◉" },
 ];
 
-/** 왼쪽 메뉴 (원본: 일정·사람·장소·설정). */
-const MENU_NAV: Array<{ key: MainView; label: string; icon: string }> = [
-  { key: "schedule", label: "일정", icon: "📅" },
-  { key: "people", label: "사람", icon: "👤" },
-  { key: "places", label: "장소", icon: "📍" },
-  { key: "settings", label: "설정", icon: "⚙" },
-];
+const PILL_VIEWS: MainView[] = ["grid", "list", "outline", "mindmap", "ontology"];
+
+const PILL_TITLES: Partial<Record<MainView, string>> = {
+  outline: "아웃라인",
+  mindmap: "마인드맵",
+  ontology: "온톨로지·분석",
+};
+
+type SidebarData = {
+  categories: Category[];
+  keywords: Array<{ id: string; name: string }>;
+  places: Array<{ id: string; name: string }>;
+  total: number;
+};
 
 export function App(props: { auth: AuthProvider }) {
   const { auth } = props;
@@ -66,8 +86,6 @@ export function App(props: { auth: AuthProvider }) {
   const [checking, setChecking] = useState(true);
   const [view, setView] = useState<View>({ name: "grid" });
   const [lastMain, setLastMain] = useState<MainView>("grid");
-  /** 온톨로지·분석은 원본처럼 하나의 메뉴, 안에서 그래프/대시보드 탭 전환. */
-  const [ontologyTab, setOntologyTab] = useState<"graph" | "analysis">("graph");
   const [notice, setNotice] = useState<string | null>(null);
   const [loginBusy, setLoginBusy] = useState(false);
   /** 로그인 전: 히어로만 보이다가 "Google로 로그인"을 누르면 동의 안내로. */
@@ -78,6 +96,18 @@ export function App(props: { auth: AuthProvider }) {
   const [needRelogin, setNeedRelogin] = useState(false);
   /** 첫 로그인 자동 가져오기는 세션당 한 번만. */
   const autoImportDone = useRef(false);
+  /** 사이드바 필터 (원본: 보기·카테고리·키워드 섹션에서 고른 값). */
+  const [memoFilter, setMemoFilter] = useState<MemoFilter>({ kind: "all" });
+  /** 제목 줄의 기간·정렬 (원본: 제목 줄 오른쪽). 격자·목록 보기가 공유한다. */
+  const [period, setPeriod] = useState<PeriodKey>("all");
+  const [sort, setSort] = useState<SortKey>("recent");
+  /** 사이드바 섹션 데이터 (보기 개수·카테고리·키워드·장소). */
+  const [sidebar, setSidebar] = useState<SidebarData>({
+    categories: [],
+    keywords: [],
+    places: [],
+    total: 0,
+  });
 
   useEffect(() => {
     try {
@@ -96,6 +126,31 @@ export function App(props: { auth: AuthProvider }) {
       .catch(() => setSession(null))
       .finally(() => setChecking(false));
   }, [auth]);
+
+  const loadSidebar = useCallback(async () => {
+    try {
+      const [cats, kws, pls, list] = await Promise.all([
+        api.categories.list(),
+        api.keywords.list(),
+        api.places.list(),
+        api.memos.list({ limit: 1 }),
+      ]);
+      setSidebar({
+        categories: cats.categories,
+        keywords: kws.keywords,
+        places: pls.places,
+        total: list.total,
+      });
+    } catch {
+      /* 사이드바는 보조 정보라 실패해도 본문은 그대로 둔다. */
+    }
+  }, []);
+
+  // 로그인 후 + 보기·필터가 바뀔 때마다 사이드바 섹션을 새로고침한다 (로컬 저장소라 가볍다).
+  useEffect(() => {
+    if (!session) return;
+    void loadSidebar();
+  }, [session, view, loadSidebar]);
 
   // 첫 로그인 시: 로컬 메모가 비어 있으면 Drive memo 폴더에서 자동 가져오기.
   // 원본 memoaeb 메모가 Drive에 있으면 여기서 로컬로 복원된다.
@@ -129,9 +184,10 @@ export function App(props: { auth: AuthProvider }) {
           );
         }
         goMain("grid");
+        void loadSidebar();
       } catch (e) {
         setNotice(
-          `Drive 가져오기 실패: ${e instanceof Error ? e.message : String(e)} — 사이드바 하단의 'Drive에서 가져오기' 버튼으로 다시 시도할 수 있습니다.`,
+          `Drive 가져오기 실패: ${e instanceof Error ? e.message : String(e)} — 사이드바 하단의 '가져오기' 버튼으로 다시 시도할 수 있습니다.`,
         );
       }
     })();
@@ -143,9 +199,14 @@ export function App(props: { auth: AuthProvider }) {
     setView({ name });
   }
 
+  /** 사이드바 필터 선택: 메모 보기(격자)로 이동해 해당 필터로 보여준다. */
+  function pickFilter(filter: MemoFilter) {
+    setMemoFilter(filter);
+    goMain("grid");
+  }
+
   /** 왼쪽 메뉴 키워드: 온톨로지 화면의 키워드 관리 카드로 이동한다. */
   function goKeywords() {
-    setOntologyTab("graph");
     goMain("ontology");
     window.setTimeout(() => {
       document.getElementById("keyword-manage")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -211,6 +272,7 @@ export function App(props: { auth: AuthProvider }) {
       const result = await api.drive.importAll(false);
       setNotice(`Drive에서 ${result.imported ?? 0}개 메모를 가져왔습니다. (전체 ${result.total ?? 0}개)`);
       goMain("grid");
+      void loadSidebar();
     } catch (e) {
       setNotice(`Drive 가져오기 실패: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -245,68 +307,171 @@ export function App(props: { auth: AuthProvider }) {
   const currentMain: MainView = view.name === "editor" ? lastMain : view.name;
   const editorMemoId = view.name === "editor" ? view.memoId : "";
   const needLogin = () => handleLogin();
+  const isMemoView = view.name !== "editor" && PILL_VIEWS.includes(currentMain);
+  const isMemoList = currentMain === "grid" || currentMain === "list";
+  const memoTitle =
+    currentMain === "grid" || currentMain === "list"
+      ? filterLabel(memoFilter)
+      : (PILL_TITLES[currentMain] ?? "전체 메모");
+  const topCategories = sidebar.categories.filter((c) => !c.parentId);
+  const subCategories = (parentId: string) =>
+    sidebar.categories.filter((c) => c.parentId === parentId);
+  const filterActive = (kind: MemoFilter["kind"], id?: string) =>
+    isMemoList &&
+    memoFilter.kind === kind &&
+    (id === undefined || (memoFilter.kind === "category" || memoFilter.kind === "keyword") ? (memoFilter as { id?: string }).id === id : false);
 
   return (
-    <main className="app">
+    <main className="app app-shell-wrap">
       <div className="app-shell">
         <aside className="sidebar">
           <NaiteLogo size={36} />
           <button type="button" className="new-memo-btn" onClick={() => void handleNewMemo()}>
             + 새 메모
           </button>
+
+          <p className="side-section">보기</p>
           <nav className="side-nav" aria-label="보기">
-            {VIEW_NAV.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                className={currentMain === item.key ? "active" : ""}
-                onClick={() => goMain(item.key)}
-              >
-                <span className="nav-icon" aria-hidden>
-                  {item.icon}
-                </span>
-                <span className="nav-label">{item.label}</span>
-              </button>
-            ))}
-          </nav>
-          <nav className="side-nav" aria-label="메뉴">
-            {MENU_NAV.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                className={currentMain === item.key ? "active" : ""}
-                onClick={() => goMain(item.key)}
-              >
-                <span className="nav-icon" aria-hidden>
-                  {item.icon}
-                </span>
-                <span className="nav-label">{item.label}</span>
-              </button>
-            ))}
+            <button
+              type="button"
+              className={filterActive("all") ? "active" : ""}
+              onClick={() => pickFilter({ kind: "all" })}
+            >
+              <span className="nav-label">전체 메모</span>
+              <span className="nav-count">{sidebar.total}</span>
+            </button>
+            <button
+              type="button"
+              className={filterActive("pinned") ? "active" : ""}
+              onClick={() => pickFilter({ kind: "pinned" })}
+            >
+              <span className="nav-label">고정됨</span>
+            </button>
+            <button
+              type="button"
+              className={filterActive("uncategorized") ? "active" : ""}
+              onClick={() => pickFilter({ kind: "uncategorized" })}
+            >
+              <span className="nav-label">미분류</span>
+            </button>
+            <button
+              type="button"
+              className={currentMain === "people" ? "active" : ""}
+              onClick={() => goMain("people")}
+            >
+              <span className="nav-icon" aria-hidden>👤</span>
+              <span className="nav-label">사람</span>
+            </button>
+            <button
+              type="button"
+              className={currentMain === "places" ? "active" : ""}
+              onClick={() => goMain("places")}
+            >
+              <span className="nav-icon" aria-hidden>📍</span>
+              <span className="nav-label">장소</span>
+            </button>
             <button
               type="button"
               className={currentMain === "ontology" ? "active" : ""}
               onClick={() => goKeywords()}
             >
-              <span className="nav-icon" aria-hidden>
-                #
-              </span>
+              <span className="nav-icon" aria-hidden>#</span>
               <span className="nav-label">키워드</span>
             </button>
+            <button
+              type="button"
+              className={currentMain === "schedule" ? "active" : ""}
+              onClick={() => goMain("schedule")}
+            >
+              <span className="nav-icon" aria-hidden>📅</span>
+              <span className="nav-label">일정</span>
+            </button>
           </nav>
+
+          <div className="side-section-row">
+            <p className="side-section">카테고리</p>
+            <button type="button" className="side-manage" onClick={() => goMain("categories")}>
+              관리
+            </button>
+          </div>
+          <nav className="side-nav" aria-label="카테고리">
+            {topCategories.map((c) => (
+              <span key={c.id}>
+                <button
+                  type="button"
+                  className={filterActive("category", c.id) ? "active" : ""}
+                  onClick={() => pickFilter({ kind: "category", id: c.id, name: c.name })}
+                >
+                  <span className="nav-icon" aria-hidden>{c.icon ?? "📁"}</span>
+                  <span className="nav-label">{c.name}</span>
+                </button>
+                {subCategories(c.id).map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={`side-sub${filterActive("category", s.id) ? " active" : ""}`}
+                    onClick={() => pickFilter({ kind: "category", id: s.id, name: s.name })}
+                  >
+                    <span className="nav-icon" aria-hidden>{s.icon ?? "📁"}</span>
+                    <span className="nav-label">{s.name}</span>
+                  </button>
+                ))}
+              </span>
+            ))}
+          </nav>
+
+          <div className="side-section-row">
+            <p className="side-section">키워드</p>
+            <button type="button" className="side-manage" onClick={() => goKeywords()}>
+              관리
+            </button>
+          </div>
+          <nav className="side-nav" aria-label="키워드">
+            {sidebar.keywords.map((k) => (
+              <button
+                key={k.id}
+                type="button"
+                className={filterActive("keyword", k.id) ? "active" : ""}
+                onClick={() => pickFilter({ kind: "keyword", id: k.id, name: k.name })}
+              >
+                <span className="nav-icon" aria-hidden>#</span>
+                <span className="nav-label">{k.name}</span>
+              </button>
+            ))}
+          </nav>
+
+          <p className="side-section">장소</p>
+          <nav className="side-nav" aria-label="장소">
+            {sidebar.places.map((p) => (
+              <button key={p.id} type="button" onClick={() => goMain("places")}>
+                <span className="nav-icon" aria-hidden>📍</span>
+                <span className="nav-label">{p.name}</span>
+              </button>
+            ))}
+          </nav>
+
           <div className="side-foot">
             <p className="meta">{session.displayName ?? session.email ?? session.userId}</p>
-            <button type="button" onClick={() => void handleDriveImport()}>
-              Drive에서 가져오기
-            </button>
-            <button type="button" onClick={() => void handleLogout()}>
-              로그아웃
-            </button>
+            <div className="side-foot-row">
+              <a href="https://www.plustree.net/" target="_blank" rel="noopener noreferrer" title="더하기나무">
+                <img className="side-company-logo" src="/assets/plustree-logo.png" alt="더하기나무" />
+              </a>
+              <button type="button" onClick={() => void handleDriveImport()}>
+                가져오기
+              </button>
+              <button type="button" onClick={() => goMain("settings")}>
+                설정
+              </button>
+              <button type="button" onClick={() => void handleLogout()}>
+                로그아웃
+              </button>
+            </div>
           </div>
         </aside>
 
         <div className="app-main">
           <header className="header">
+            <NaiteLogo size={36} />
             <input
               className="header-search"
               type="search"
@@ -315,10 +480,6 @@ export function App(props: { auth: AuthProvider }) {
               onChange={(e) => handleSearchChange(e.target.value)}
               aria-label="메모 검색"
             />
-            <span className="meta">{session.displayName ?? session.email ?? session.userId}</span>
-            <button type="button" onClick={() => void handleLogout()}>
-              로그아웃
-            </button>
           </header>
           {needRelogin ? (
             <p className="notice">
@@ -329,8 +490,64 @@ export function App(props: { auth: AuthProvider }) {
             </p>
           ) : null}
           {view.name !== "list" && notice ? <p className="notice">{notice}</p> : null}
+          {isMemoView ? (
+            <>
+              <div className="title-row">
+                <h1>{memoTitle}</h1>
+                {isMemoList ? (
+                  <div className="title-controls">
+                    <select
+                      className="period-select"
+                      value={period}
+                      onChange={(e) => setPeriod(e.target.value as PeriodKey)}
+                      aria-label="기간"
+                    >
+                      {PERIODS.map((p) => (
+                        <option key={p.key} value={p.key}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={sort}
+                      onChange={(e) => setSort(e.target.value as SortKey)}
+                      aria-label="정렬"
+                    >
+                      {SORTS.map((s) => (
+                        <option key={s.key} value={s.key}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+              </div>
+              <div className="view-pills" role="tablist" aria-label="보기 전환">
+                {MEMO_PILLS.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={currentMain === item.key}
+                    className={currentMain === item.key ? "active" : ""}
+                    onClick={() => goMain(item.key)}
+                  >
+                    <span className="pill-icon" aria-hidden>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
           {view.name === "grid" ? (
-            <GridView onOpen={openMemo} setNotice={setNotice} search={search} />
+            <GridView
+              onOpen={openMemo}
+              setNotice={setNotice}
+              search={search}
+              filter={memoFilter}
+              period={period}
+              sort={sort}
+            />
           ) : view.name === "list" ? (
             <MemoListView
               onOpen={openMemo}
@@ -338,6 +555,9 @@ export function App(props: { auth: AuthProvider }) {
               notice={notice}
               setNotice={setNotice}
               search={search}
+              filter={memoFilter}
+              period={period}
+              sort={sort}
             />
           ) : view.name === "outline" ? (
             <OutlineView onOpen={openMemo} setNotice={setNotice} />
@@ -345,31 +565,8 @@ export function App(props: { auth: AuthProvider }) {
             <MindmapView onOpen={openMemo} setNotice={setNotice} />
           ) : view.name === "ontology" ? (
             <div>
-              <div className="toolbar" role="tablist" aria-label="온톨로지·분석">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={ontologyTab === "graph"}
-                  className={ontologyTab === "graph" ? "active" : ""}
-                  onClick={() => setOntologyTab("graph")}
-                >
-                  온톨로지 그래프
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={ontologyTab === "analysis"}
-                  className={ontologyTab === "analysis" ? "active" : ""}
-                  onClick={() => setOntologyTab("analysis")}
-                >
-                  분석 대시보드
-                </button>
-              </div>
-              {ontologyTab === "graph" ? (
-                <OntologyView onOpen={openMemo} setNotice={setNotice} />
-              ) : (
-                <AnalysisView onOpen={openMemo} setNotice={setNotice} />
-              )}
+              <OntologyView onOpen={openMemo} setNotice={setNotice} />
+              <AnalysisView onOpen={openMemo} setNotice={setNotice} />
             </div>
           ) : view.name === "schedule" ? (
             <ScheduleView onOpen={openMemo} setNotice={setNotice} onNeedLogin={needLogin} />
@@ -379,6 +576,8 @@ export function App(props: { auth: AuthProvider }) {
             <PlacesView onOpen={openMemo} setNotice={setNotice} />
           ) : view.name === "settings" ? (
             <SettingsView setNotice={setNotice} onNeedLogin={needLogin} />
+          ) : view.name === "categories" ? (
+            <CategoryManager setNotice={setNotice} />
           ) : (
             <MemoEditorView
               memoId={editorMemoId}
@@ -387,7 +586,6 @@ export function App(props: { auth: AuthProvider }) {
               setNotice={setNotice}
             />
           )}
-          <PlusTreeFooter />
         </div>
       </div>
       <button

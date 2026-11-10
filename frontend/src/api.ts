@@ -300,7 +300,7 @@ export const api = {
   },
 
   memos: {
-    list: async (params?: { categoryId?: string; search?: string; from?: string; to?: string; sort?: string; limit?: number; offset?: number; pinned?: boolean }) => {
+    list: async (params?: { categoryId?: string; search?: string; from?: string; to?: string; sort?: string; limit?: number; offset?: number; pinned?: boolean; keywordId?: string }) => {
       const state = loadState();
       let memos = [...state.memos];
       if (params?.categoryId === "__none__") {
@@ -310,6 +310,13 @@ export const api = {
         memos = memos.filter((m) => m.categoryId === params.categoryId);
       }
       if (params?.pinned) memos = memos.filter((m) => m.pinned === 1);
+      if (params?.keywordId) {
+        // 사이드바 키워드 섹션: 해당 키워드가 붙은 메모만.
+        const ids = new Set(
+          state.memoKeywords.filter((l) => l.keywordId === params.keywordId).map((l) => l.memoId),
+        );
+        memos = memos.filter((m) => ids.has(m.id));
+      }
       if (params?.search) {
         const q = params.search.trim();
         memos = memos.filter(
