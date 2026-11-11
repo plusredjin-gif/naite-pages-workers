@@ -316,7 +316,9 @@ export function PlacesView(props: {
         <h3>장소 검색</h3>
         {mapsKeyMissing ? (
           <p className="notice">
-            Google Maps API 키가 설정되지 않아 장소 검색을 할 수 없습니다. 아래 직접 입력으로 장소를 추가하세요.
+            Google API 키가 없어 장소 검색을 할 수 없습니다. 설정 → Google API 키에서
+            키를 저장하면 검색이 됩니다 (Drive 파일 선택기와 같은 키를 씁니다).
+            키가 없어도 아래 직접 입력으로 장소를 추가할 수 있습니다.
           </p>
         ) : null}
         <div className="toolbar">

@@ -2,6 +2,7 @@
  * 나이테 자체 로그인·동의 안내 (Google 공식 동의 화면을 흉내 내지 않음).
  * 실제 로그인·동의는 accounts.google.com 공식 UI로만 진행한다.
  */
+import { GoogleLoginButton } from "./components/GoogleLoginButton";
 export function LoginGuide(props: {
   onLogin: () => void;
   notice?: string | null;
@@ -52,9 +53,12 @@ export function LoginGuide(props: {
         </p>
       ) : null}
       {notice ? <p className="notice">{notice}</p> : null}
-      <button type="button" onClick={onLogin} disabled={busy || !clientConfigured}>
-        {busy ? "Google 동의 화면 여는 중…" : "Google로 로그인"}
-      </button>
+      <GoogleLoginButton
+        onClick={onLogin}
+        disabled={!clientConfigured}
+        busy={busy}
+        label="Google로 로그인"
+      />
       <p className="meta">이 안내만으로 로그인이 완료된 것은 아닙니다. 공식 동의 후 콜백이 성공해야 합니다.</p>
     </section>
   );

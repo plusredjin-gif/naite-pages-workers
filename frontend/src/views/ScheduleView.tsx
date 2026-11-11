@@ -104,7 +104,11 @@ export function ScheduleView(props: {
   const [allDay, setAllDay] = useState(false);
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
+  /** 팝업 알림 ("" = 없음). 원본 memoaeb의 "알림"과 동일. */
+  const [reminder, setReminder] = useState("");
   const [memoId, setMemoId] = useState("");
+  /** 삭제 확인 2단계: 삭제 버튼을 한 번 누르면 이 일정만 확인 상태가 된다. */
+  const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
 
   const handleError = useCallback(
     (e: unknown, fallback: string) => {
@@ -186,6 +190,20 @@ export function ScheduleView(props: {
 
   const incompleteCount = useMemo(() => tasks.filter((t) => !t.completed).length, [tasks]);
 
+  /** 하위 할일(Google Tasks subtask)은 상위 할일 바로 아래에 들여쓰기로 묶는다. */
+  const taskTree = useMemo(() => {
+    const byParent = new Map<string, TaskItem[]>();
+    for (const t of sortedTasks) {
+      if (t.parent) {
+        const list = byParent.get(t.parent) ?? [];
+        list.push(t);
+        byParent.set(t.parent, list);
+      }
+    }
+    const top = sortedTasks.filter((t) => !t.parent);
+    return { top, byParent };
+  }, [sortedTasks]);
+
   async function handleRefresh() {
     setNotice(null);
     await Promise.all([loadAgenda(), loadTasks()]);
@@ -226,6 +244,7 @@ export function ScheduleView(props: {
         start,
         end,
         allDay,
+        reminderMinutes: reminder === "" ? null : Number(reminder),
       });
       setNotice("일정을 만들었습니다.");
       setTitle("");
@@ -235,6 +254,23 @@ export function ScheduleView(props: {
       handleError(err, "일정을 만들지 못했습니다");
     } finally {
       setCreating(false);
+    }
+  }
+
+  /** 일정 삭제: Google 캘린더에서 지운다. 메모에서 만든 일정이면 연결 기록도 함께 지운다. */
+  async function handleDeleteEvent(ev: AgendaEvent) {
+    if (!ev.googleEventId) return;
+    if (deletingEventId !== ev.googleEventId) {
+      setDeletingEventId(ev.googleEventId);
+      return;
+    }
+    setDeletingEventId(null);
+    try {
+      await api.calendar.deleteEvent(ev.googleEventId, ev.memoId ?? undefined);
+      setNotice("일정을 삭제했습니다.");
+      await loadAgenda();
+    } catch (err) {
+      handleError(err, "일정을 삭제하지 못했습니다");
     }
   }
 
@@ -291,6 +327,16 @@ export function ScheduleView(props: {
             </label>
           </div>
           <label>
+            알림
+            <select value={reminder} onChange={(e) => setReminder(e.target.value)}>
+              <option value="">없음</option>
+              <option value="10">10분 전</option>
+              <option value="30">30분 전</option>
+              <option value="60">1시간 전</option>
+              <option value="1440">하루 전</option>
+            </select>
+          </label>
+          <label>
             메모 연결 (선택)
             <select value={memoId} onChange={(e) => setMemoId(e.target.value)}>
               <option value="">연결 안 함</option>
@@ -339,6 +385,15 @@ export function ScheduleView(props: {
                         메모
                       </button>
                     ) : null}
+                    {ev.googleEventId ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteEvent(ev)}
+                        title="이 일정을 삭제합니다"
+                      >
+                        {deletingEventId === ev.googleEventId ? "정말 삭제" : "삭제"}
+                      </button>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -368,17 +423,29 @@ export function ScheduleView(props: {
               할일 {tasks.length}개 · 미완료 {incompleteCount}개
             </p>
             <ul className="task-list">
-              {sortedTasks.map((t) => (
-                <li
-                  key={t.googleTaskId || t.title}
-                  className={t.completed ? "task-item task-done" : "task-item"}
-                >
-                  <span className="task-check" aria-label={t.completed ? "완료" : "미완료"}>
-                    {t.completed ? "✓" : "○"}
-                  </span>
-                  <span className="task-title">{t.title || "(제목 없음)"}</span>
-                  {t.due ? <span className="meta">마감 {formatDue(t.due)}</span> : null}
-                  {t.blockId ? <span className="chip">메모 연결</span> : null}
+              {taskTree.top.map((t) => (
+                <li key={t.googleTaskId || t.title}>
+                  <div className={t.completed ? "task-item task-done" : "task-item"}>
+                    <span className="task-check" aria-label={t.completed ? "완료" : "미완료"}>
+                      {t.completed ? "✓" : "○"}
+                    </span>
+                    <span className="task-title">{t.title || "(제목 없음)"}</span>
+                    {t.due ? <span className="meta">마감 {formatDue(t.due)}</span> : null}
+                    {t.blockId ? <span className="chip">메모 연결</span> : null}
+                  </div>
+                  {(taskTree.byParent.get(t.googleTaskId) ?? []).map((child) => (
+                    <div
+                      key={child.googleTaskId || child.title}
+                      className={child.completed ? "task-item task-done task-sub" : "task-item task-sub"}
+                    >
+                      <span className="task-check" aria-label={child.completed ? "완료" : "미완료"}>
+                        {child.completed ? "✓" : "○"}
+                      </span>
+                      <span className="task-title">└ {child.title || "(제목 없음)"}</span>
+                      {child.due ? <span className="meta">마감 {formatDue(child.due)}</span> : null}
+                      {child.blockId ? <span className="chip">메모 연결</span> : null}
+                    </div>
+                  ))}
                 </li>
               ))}
             </ul>

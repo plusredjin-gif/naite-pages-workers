@@ -255,7 +255,15 @@ export async function driveUploadAttachment(
 
 export async function calendarCreateEvent(
   provider: TokenProvider,
-  event: { summary: string; description?: string; start: string; end: string; allDay?: boolean },
+  event: {
+    summary: string;
+    description?: string;
+    start: string;
+    end: string;
+    allDay?: boolean;
+    /** 팝업 알림 (원본 memoaeb의 "알림" — 시작 몇 분 전). 없으면 기본 알림. */
+    reminders?: { useDefault?: boolean; overrides?: Array<{ method: "popup"; minutes: number }> };
+  },
 ): Promise<string | null> {
   const body: Record<string, unknown> = {
     summary: event.summary,
@@ -268,12 +276,30 @@ export async function calendarCreateEvent(
     body.start = { dateTime: event.start };
     body.end = { dateTime: event.end };
   }
+  if (event.reminders) {
+    body.reminders = event.reminders;
+  }
   const data = await googleFetchJson<{ id?: string }>(
     provider,
     "https://www.googleapis.com/calendar/v3/calendars/primary/events",
     { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
   );
   return data.id ?? null;
+}
+
+/** 캘린더 일정 삭제. 이미 지워진 일정(404)이면 false를 반환한다. */
+export async function calendarDeleteEvent(provider: TokenProvider, eventId: string): Promise<boolean> {
+  const res = await googleFetch(
+    provider,
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`,
+    { method: "DELETE" },
+  );
+  if (res.status === 404) return false;
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new GoogleApiError(res.status, `calendar_delete_failed_${res.status}`, body.slice(0, 200));
+  }
+  return true;
 }
 
 export type CalendarEventItem = {
@@ -342,16 +368,38 @@ export async function tasksCreateOrPatch(
   listId: string,
   task: { title: string; status: string; notes?: string; due?: string },
   existingId?: string | null,
+  /** 하위 할일(Google Tasks subtask): 상위 할일의 Google task id. 신규 생성 때만 쓴다. */
+  parentTaskId?: string | null,
 ): Promise<string | null> {
+  const parentParam = !existingId && parentTaskId ? `?parent=${encodeURIComponent(parentTaskId)}` : "";
   const url = existingId
     ? `https://tasks.googleapis.com/tasks/v1/lists/${listId}/tasks/${existingId}`
-    : `https://tasks.googleapis.com/tasks/v1/lists/${listId}/tasks`;
+    : `https://tasks.googleapis.com/tasks/v1/lists/${listId}/tasks${parentParam}`;
   const data = await googleFetchJson<{ id?: string }>(provider, url, {
     method: existingId ? "PATCH" : "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(task),
   });
   return data.id ?? existingId ?? null;
+}
+
+/** Google 할일 삭제. 이미 지워진 할일(404)이면 false를 반환한다. */
+export async function tasksDeleteTask(
+  provider: TokenProvider,
+  listId: string,
+  taskId: string,
+): Promise<boolean> {
+  const res = await googleFetch(
+    provider,
+    `https://tasks.googleapis.com/tasks/v1/lists/${listId}/tasks/${encodeURIComponent(taskId)}`,
+    { method: "DELETE" },
+  );
+  if (res.status === 404) return false;
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new GoogleApiError(res.status, `tasks_delete_failed_${res.status}`, body.slice(0, 200));
+  }
+  return true;
 }
 
 /* ---------------- People API v1 (직접 호출 — 검색만) ---------------- */

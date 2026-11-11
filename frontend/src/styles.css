@@ -14,11 +14,69 @@
   font-display: swap;
 }
 
+/* —— 디자인 토큰 (스페이스 원본 memoaeb 렌더링에서 추출) ——
+   빌더 내부 구조는 이식하지 않고, 보이는 스타일만 옮겼다.
+   프레임워크는 그대로 Vite + React + plain CSS.
+   색·수치는 원본 스크린샷(히어로·메모 목록)에서 읽은 값이다.
+   앞으로 디자인을 고칠 때는 이 변수만 보면 된다. */
+:root {
+  /* 색 — 값은 여기에만 적는다. 다른 곳에서는 var(--naite-*)로만 쓴다. */
+  --naite-bg: #fafaf5; /* 페이지 배경 (따뜻한 미색) */
+  --naite-card: #ffffff; /* 카드 배경 */
+  --naite-orange: #e8590c; /* 주황 (버튼·소제목·강조) */
+  --naite-orange-dark: #c2571b; /* 로고 동심원 진한 주황 */
+  --naite-brown: #b98a4e; /* 잠금 표시·연한 갈색 */
+  --naite-ink: #222222; /* 본문 글자 */
+  --naite-ink-soft: #333333; /* 진한 보조 글자 */
+  --naite-gray: #555555; /* 보조 글자 */
+  --naite-gray-2: #666666; /* 연한 보조 글자 */
+  --naite-muted: #888888; /* 메타·작은 글자 */
+  --naite-faint: #999999; /* 옅은 글자 */
+  --naite-pale: #aaaaaa; /* 섹션 라벨 */
+  --naite-green: #2e9e5b; /* Drive 저장됨·기간 초록 */
+  --naite-border: #e5e5e5; /* 테두리 */
+  --naite-border-strong: #dddddd; /* 카드 테두리 */
+  --naite-border-soft: #e0e0e0; /* 옅은 테두리 */
+  --naite-border-light: #eeeeee; /* 가장 옅은 테두리 */
+  --naite-cream: #fff8ef; /* 예시 카드 배경 */
+  --naite-warm: #f0ede4; /* 선택됨 배경 (따뜻한 베이지) */
+  --naite-warm-2: #f5e9d8; /* 선택됨 배경 2 */
+  --naite-notice-bg: #fff3cd; /* 알림 배경 */
+  --naite-notice-border: #e6c87a; /* 알림 테두리 */
+  --naite-on-orange: #ffffff; /* 주황 버튼 위 글자 */
+  --naite-on-dark: #ffffff; /* 검정 pill·칩 위 글자 */
+  --naite-brown-dark: #6b4a2f; /* 진한 갈색 글자 */
+  --naite-orange-tint: #fff3e8; /* 옅은 주황 배경 */
+  --naite-warm-3: #f3ede2; /* 아바타 배경 베이지 */
+  --naite-offwhite: #fafafa; /* 거의 흰 배경 */
+  /* 모양 */
+  --radius-lg: 20px; /* 메모 카드 둥근 정도 (원본처럼 크게) */
+  --radius-md: 12px; /* 일반 카드·입력 */
+  --radius-xs: 4px; /* 가장 작은 요소 */
+  --radius-sm: 8px; /* 작은 요소 */
+  --radius-pill: 999px; /* pill 버튼·칩 */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06); /* 카드 그림자 */
+  --shadow-btn: 0 2px 8px rgba(0, 0, 0, 0.12); /* 로그인 pill 그림자 */
+  --shadow-fab: 0 4px 12px rgba(0, 0, 0, 0.25); /* FAB 그림자 */
+  --naite-overlay: rgba(0, 0, 0, 0.45); /* 모달 배경 어둡게 */
+  /* 폰트 크기 */
+  --font-hero: 44px; /* 히어로 제목 (데스크톱) */
+  --font-hero-mobile: 40px; /* 히어로 제목 (모바일) */
+  --font-title: 20px; /* 목록 제목 */
+  --font-title-mobile: 18px; /* 목록 제목 (모바일) */
+  --font-card-title: 17px; /* 카드 제목 */
+  --font-body: 15px; /* 본문 */
+  --font-meta: 13px; /* 메타·작은 글자 */
+  /* 간격·크기 */
+  --gap: 12px; /* 카드 간격 */
+  --fab-size: 56px; /* FAB 크기 (모바일에서 숨김) */
+}
+
 body {
   margin: 0;
   font-family: "HancomMalangMalang", system-ui, -apple-system, "Malgun Gothic", sans-serif;
-  color: #222;
-  background: #fafaf5;
+  color: var(--naite-ink);
+  background: var(--naite-bg);
 }
 
 .app {
@@ -40,9 +98,9 @@ body {
   min-width: 140px;
   padding: 8px 10px;
   font-size: 14px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #fff;
+  border: 1px solid var(--naite-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--naite-card);
 }
 
 .header h1 {
@@ -55,6 +113,28 @@ body {
   gap: 8px;
   flex-wrap: wrap;
   margin: 16px 0;
+}
+
+/* Google 계정 로그인 버튼 (스페이스 원본: 흰색 pill + Google G 로고). */
+.google-login-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--naite-card);
+  color: var(--naite-ink);
+  border: 1px solid var(--naite-border-soft);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-btn);
+  padding: 13px 28px;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.google-login-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
 .toolbar input[type="search"],
@@ -75,14 +155,14 @@ button:disabled {
 }
 
 .notice {
-  background: #fff3cd;
-  border: 1px solid #e6c87a;
+  background: var(--naite-notice-bg);
+  border: 1px solid var(--naite-notice-border);
   padding: 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 
 .meta {
-  color: #666;
+  color: var(--naite-gray-2);
   font-size: 13px;
 }
 
@@ -101,9 +181,9 @@ button:disabled {
   gap: 4px;
   padding: 12px;
   margin-bottom: 8px;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  background: var(--naite-card);
+  border: 1px solid var(--naite-border-strong);
+  border-radius: var(--radius-sm);
 }
 
 .memo-title {
@@ -111,12 +191,12 @@ button:disabled {
 }
 
 .memo-preview {
-  color: #555;
+  color: var(--naite-gray);
   font-size: 13px;
 }
 
 .memo-date {
-  color: #999;
+  color: var(--naite-faint);
   font-size: 12px;
 }
 
@@ -156,9 +236,9 @@ button:disabled {
 }
 
 .block-controls button {
-  border: 1px solid #ddd;
-  background: #fff;
-  border-radius: 6px;
+  border: 1px solid var(--naite-border-strong);
+  background: var(--naite-card);
+  border-radius: var(--radius-sm);
   width: 24px;
   height: 22px;
   font-size: 12px;
@@ -188,7 +268,7 @@ button:disabled {
 
 .block-photo {
   max-width: 100%;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .paragraph-preview {
@@ -202,8 +282,8 @@ button:disabled {
 }
 
 .paragraph-preview code {
-  background: #f0ede4;
-  border-radius: 4px;
+  background: var(--naite-warm);
+  border-radius: var(--radius-xs);
   padding: 1px 4px;
 }
 
@@ -220,7 +300,7 @@ button:disabled {
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--naite-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -229,8 +309,8 @@ button:disabled {
 }
 
 .modal-card {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--naite-card);
+  border-radius: var(--radius-md);
   padding: 16px;
   width: min(560px, 100%);
   max-height: 85vh;
@@ -292,7 +372,7 @@ button:disabled {
   justify-content: center;
   margin-top: 2rem;
   padding: 1rem 0.75rem;
-  border-top: 1px solid #e5e5e5;
+  border-top: 1px solid var(--naite-border);
   font-size: 12px;
 }
 
@@ -313,18 +393,18 @@ button:disabled {
 .naite-word {
   font-weight: 800;
   font-size: 20px;
-  color: #6b4a2f;
+  color: var(--naite-brown-dark);
   letter-spacing: 0.02em;
 }
 
 .naite-ko {
   font-weight: 800;
   font-size: 18px;
-  color: #222;
+  color: var(--naite-ink);
 }
 
 .naite-ko-accent {
-  color: #e8590c;
+  color: var(--naite-orange);
 }
 
 .teapot-img {
@@ -344,7 +424,7 @@ button:disabled {
   width: 220px;
   flex-shrink: 0;
   padding: 16px 12px;
-  border-right: 1px solid #e5e5e5;
+  border-right: 1px solid var(--naite-border);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -367,25 +447,25 @@ button:disabled {
   text-align: left;
   background: none;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 9px 10px;
   font-size: 14px;
-  color: #333;
+  color: var(--naite-ink-soft);
 }
 
 .side-nav button:hover {
-  background: #f0ede4;
+  background: var(--naite-warm);
 }
 
 .side-nav button.active {
-  background: #f5e9d8;
+  background: var(--naite-warm-2);
   font-weight: 700;
 }
 
 .side-nav .nav-count {
   margin-left: auto;
   font-size: 12px;
-  color: #999;
+  color: var(--naite-faint);
 }
 
 /* —— 동그란 원형 라인 아이콘 (jin 결정, 앱 전체 공통) ——
@@ -429,7 +509,7 @@ button:disabled {
 .pin-mark {
   display: inline-flex;
   vertical-align: -2px;
-  color: #666;
+  color: var(--naite-gray-2);
 }
 
 .side-foot {
@@ -458,9 +538,9 @@ button:disabled {
   margin: 4px 0 8px;
   padding: 10px;
   border: none;
-  border-radius: 10px;
-  background: #e8590c;
-  color: #fff;
+  border-radius: var(--radius-md);
+  background: var(--naite-orange);
+  color: var(--naite-on-orange);
   font-weight: 700;
   font-size: 14px;
   cursor: pointer;
@@ -477,12 +557,12 @@ button:disabled {
   height: 56px;
   border-radius: 50%;
   border: none;
-  background: #e8590c;
-  color: #fff;
+  background: var(--naite-orange);
+  color: var(--naite-on-orange);
   font-size: 28px;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-fab);
   z-index: 20;
   transition:
     transform 0.2s ease,
@@ -496,9 +576,11 @@ button:disabled {
 }
 
 @media (max-width: 640px) {
-  .fab-new-memo {
-    display: block;
-  }
+  /* 모바일 FAB 제거: 떠 있는 + 버튼이 카드 글자(날짜·Drive 저장됨)를
+     가린다는 지적이 반복됐다. 모바일에는 상단에 "+ 새 메모" 버튼이
+     이미 있고, 목록 맨 아래에도 "+ 새 메모" 버튼을 두어 FAB 없이도
+     만들 수 있게 한다. (스페이스 원본에는 FAB이 있지만, 가림 문제
+     때문에 배포판 모바일에서는 빼는 것으로 jin 지적 반영.) */
   .app-main {
     padding: 12px;
     /* FAB(56px) + 간격(16px) + 여유분: 마지막 카드·페이지네이션이 FAB 아래로
@@ -516,9 +598,9 @@ button:disabled {
 }
 
 .example-card {
-  border: 1px solid #e5e5e5;
-  border-radius: 12px;
-  background: #fff8ef;
+  border: 1px solid var(--naite-border);
+  border-radius: var(--radius-md);
+  background: var(--naite-cream);
   padding: 14px;
 }
 
@@ -530,13 +612,13 @@ button:disabled {
 .example-card p {
   margin: 4px 0;
   font-size: 13px;
-  color: #555;
+  color: var(--naite-gray);
 }
 
 .example-tag {
   font-size: 12px;
   font-weight: 700;
-  color: #e8590c;
+  color: var(--naite-orange);
 }
 
 /* —— 히어로 (랜딩) —— */
@@ -559,7 +641,7 @@ button:disabled {
 }
 
 .hero-text p {
-  color: #555;
+  color: var(--naite-gray);
   line-height: 1.6;
   margin: 0 0 16px;
 }
@@ -583,9 +665,9 @@ button:disabled {
 }
 
 .feature-card {
-  background: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 10px;
+  background: var(--naite-card);
+  border: 1px solid var(--naite-border);
+  border-radius: var(--radius-md);
   padding: 14px;
 }
 
@@ -597,15 +679,15 @@ button:disabled {
 .feature-card p {
   margin: 0;
   font-size: 13px;
-  color: #666;
+  color: var(--naite-gray-2);
   line-height: 1.55;
 }
 
 /* —— 공통 뷰 요소 —— */
 .card {
-  background: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 10px;
+  background: var(--naite-card);
+  border: 1px solid var(--naite-border);
+  border-radius: var(--radius-md);
   padding: 14px;
   margin-bottom: 12px;
 }
@@ -621,17 +703,17 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  border: 1px solid #ddd;
-  background: #fff;
-  border-radius: 999px;
+  border: 1px solid var(--naite-border-strong);
+  background: var(--naite-card);
+  border-radius: var(--radius-pill);
   padding: 5px 10px;
   font-size: 13px;
 }
 
 .chip.active {
-  background: #222;
-  color: #fff;
-  border-color: #222;
+  background: var(--naite-ink);
+  color: var(--naite-on-dark);
+  border-color: var(--naite-ink);
 }
 
 .empty-state {
@@ -639,7 +721,7 @@ button:disabled {
   align-items: center;
   gap: 16px;
   padding: 24px 8px;
-  color: #666;
+  color: var(--naite-gray-2);
 }
 
 .empty-state img {
@@ -655,9 +737,10 @@ button:disabled {
 }
 
 .memo-card {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 10px;
+  background: var(--naite-card);
+  border: 1px solid var(--naite-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
   padding: 12px;
   text-align: left;
   width: 100%;
@@ -668,6 +751,14 @@ button:disabled {
   margin-bottom: 4px;
 }
 
+/* 카드의 Drive 저장됨 배지 (원본: 초록 글자). */
+.memo-drive-badge {
+  color: var(--naite-green);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .kv {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -676,7 +767,7 @@ button:disabled {
 }
 
 .kv dt {
-  color: #888;
+  color: var(--naite-muted);
 }
 
 .kv dd {
@@ -684,9 +775,9 @@ button:disabled {
 }
 
 .graph-wrap {
-  background: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 10px;
+  background: var(--naite-card);
+  border: 1px solid var(--naite-border);
+  border-radius: var(--radius-md);
   overflow: hidden;
   margin: 12px 0;
 }
@@ -706,7 +797,7 @@ button:disabled {
 }
 
 .lock-mark {
-  color: #b98a4e;
+  color: var(--naite-brown);
 }
 
 @media (max-width: 640px) {
@@ -729,7 +820,7 @@ button:disabled {
     flex-wrap: wrap;
     align-items: center;
     border-right: none;
-    border-bottom: 1px solid #e5e5e5;
+    border-bottom: 1px solid var(--naite-border);
     padding: 8px;
   }
   .sidebar .naite-logo {
@@ -765,7 +856,7 @@ button:disabled {
 .side-section {
   margin: 16px 8px 4px;
   font-size: 12px;
-  color: #aaa;
+  color: var(--naite-pale);
 }
 
 .side-section-row {
@@ -782,7 +873,7 @@ button:disabled {
 .side-manage {
   background: none;
   border: none;
-  color: #e8590c;
+  color: var(--naite-orange);
   font-size: 12px;
   padding: 2px 4px;
 }
@@ -810,11 +901,11 @@ button:disabled {
   border: none;
   padding: 4px 6px;
   font-size: 12px;
-  color: #666;
+  color: var(--naite-gray-2);
 }
 
 .side-foot-row button:hover {
-  color: #222;
+  color: var(--naite-ink);
 }
 
 .side-company-logo {
@@ -834,7 +925,7 @@ button:disabled {
 
 .title-row h1 {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--font-title);
 }
 
 .title-controls {
@@ -847,13 +938,13 @@ button:disabled {
   border: none;
   background: transparent;
   font-size: 14px;
-  color: #555;
+  color: var(--naite-gray);
   cursor: pointer;
   padding: 4px 2px;
 }
 
 .title-controls select.period-select {
-  color: #2e7d32;
+  color: var(--naite-green);
 }
 
 /* 보기 전환 pill 줄 (원본: 격자 검정 pill · 목록·아웃라인·마인드맵·온톨로지·분석). */
@@ -874,18 +965,18 @@ button:disabled {
   white-space: nowrap;
   border: none;
   background: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 8px 14px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 14px;
-  color: #333;
+  color: var(--naite-ink-soft);
 }
 
 .view-pills button.active {
-  background: #222;
-  color: #fff;
+  background: var(--naite-ink);
+  color: var(--naite-on-dark);
 }
 
 /* 보기 전환 pill (원본 규칙): 데스크톱은 원형 아이콘+단어, lg 미만(1024px 미만)은
@@ -903,7 +994,7 @@ button:disabled {
 .memo-section {
   font-size: 13px;
   font-weight: 400;
-  color: #aaa;
+  color: var(--naite-pale);
   margin: 16px 0 8px;
 }
 
@@ -922,17 +1013,19 @@ button:disabled {
     width: 100%;
     margin-top: 8px;
     padding: 8px 8px 0;
-    border-top: 1px solid #e5e5e5;
+    border-top: 1px solid var(--naite-border);
   }
   .title-row h1 {
-    font-size: 18px;
+    font-size: var(--font-title-mobile);
   }
   .title-controls {
     gap: 8px;
   }
-  /* 모바일 제목 잘림 수정: 제목은 한 줄로 전부 보이고, 전체 기간·최근
-     수정순 선택은 아래 줄로 내린다. 제목이 좁아져 "전체 …"로 잘리지 않게
-     제목 줄을 감싸고 제목은 줄바꿈 없이 한 줄로 둔다. */
+  /* 모바일 제목 잘림 수정: 제목은 절대 "…"로 자르지 않는다.
+     제목은 줄바꿈 없이 한 줄로 전부 보이고, 전체 기간·최근 수정순
+     선택은 아래 줄로 내린다. (이전 ellipsis 방식은 긴 제목을 자르던
+     버그였음 — 스페이스 원본도 모바일에서 "전체 …"로 잘리지만,
+     배포판은 제목을 전부 보여주는 쪽으로 한다.) */
   .title-row {
     flex-wrap: wrap;
     row-gap: 2px;
@@ -940,8 +1033,6 @@ button:disabled {
   .title-row h1 {
     flex: 1 0 auto;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
   .title-row .title-controls {
     flex: 1 1 100%;
@@ -1005,7 +1096,81 @@ button:disabled {
   min-width: 0;
   padding: 8px 10px;
   font-size: 14px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #fff;
+  border: 1px solid var(--naite-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--naite-card);
+}
+
+/* ---- 목록 가상 스크롤 (2026-11-11) ---- */
+.virtual-list {
+  height: 70vh;
+  max-height: 720px;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* 가상 스크롤 행은 높이가 96px로 고정돼야 한다 (MemoListView ROW_HEIGHT과 같은 값). */
+.memo-list.virtual .memo-item {
+  height: 96px;
+  box-sizing: border-box;
+  margin-bottom: 0;
+}
+
+.memo-list.virtual .memo-title,
+.memo-list.virtual .memo-preview {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- 체크리스트 하위 할일 (2026-11-11) ---- */
+.subtask-list {
+  margin: 4px 0 4px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subtask-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.subtask-row input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  font-size: 13px;
+}
+
+.subtask-row input[type="date"] {
+  font-size: 12px;
+  padding: 2px;
+}
+
+.subtask-add {
+  margin: 4px 0 4px 28px;
+  font-size: 13px;
+}
+
+/* ---- 일정 알림·삭제 (2026-11-11) ---- */
+.reminder-label {
+  font-size: 13px;
+  color: var(--naite-gray);
+}
+
+/* 목록 맨 아래 "+ 새 메모" 버튼 (모바일 FAB 대신 — 카드 글자를 가리지 않음). */
+.list-bottom-new {
+  display: block;
+  width: 100%;
+  margin: 16px 0 8px;
+  padding: 14px;
+  background: var(--naite-orange);
+  color: var(--naite-on-orange);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
 }

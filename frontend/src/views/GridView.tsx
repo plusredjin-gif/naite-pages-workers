@@ -36,8 +36,12 @@ export function GridView(props: {
   period: PeriodKey;
   /** 제목 줄의 정렬 선택 (App 셸). */
   sort: SortKey;
+  /** 자동 동기화 등으로 목록을 새로고침해야 할 때 올리는 값 (App 셸). */
+  refreshTick?: number;
+  /** 목록 맨 아래 "+ 새 메모" 버튼용 (App 셸의 handleNewMemo). */
+  onNew?: () => void;
 }) {
-  const { onOpen, setNotice, search, filter, period, sort } = props;
+  const { onOpen, setNotice, search, filter, period, sort, refreshTick, onNew } = props;
   const [memos, setMemos] = useState<MemoPreview[]>([]);
   const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -96,6 +100,12 @@ export function GridView(props: {
     void load();
   }, [load]);
 
+  // 자동 동기화로 새 메모가 들어오면 다시 불러온다.
+  useEffect(() => {
+    if (refreshTick === undefined || refreshTick === 0) return;
+    void load();
+  }, [refreshTick, load]);
+
   // 검색어·필터·기간·정렬이 바뀌면 첫 페이지부터 다시 불러온다.
   useEffect(() => {
     setOffset(0);
@@ -126,6 +136,7 @@ export function GridView(props: {
         <span className="memo-card-foot">
           <span className="cat-dot" style={{ backgroundColor: dotColor }} />
           <span className="memo-card-cat">{cat ? cat.name : "미분류"}</span>
+          {m.driveFileId ? <span className="memo-drive-badge">Drive 저장됨</span> : null}
           <span className="memo-date">
             {new Date(m.updatedAt).toLocaleDateString("ko-KR")}
           </span>
@@ -176,6 +187,11 @@ export function GridView(props: {
           다음
         </button>
       </div>
+      {onNew ? (
+        <button type="button" className="list-bottom-new" onClick={onNew}>
+          + 새 메모
+        </button>
+      ) : null}
     </div>
   );
 }

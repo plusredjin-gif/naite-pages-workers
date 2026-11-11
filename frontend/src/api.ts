@@ -31,6 +31,7 @@ import {
   TOKEN_EXPIRED_CODE,
   UNAUTHORIZED_CODE,
   calendarCreateEvent,
+  calendarDeleteEvent,
   calendarListAgenda,
   driveDownloadJson,
   driveEnsureMemoFolder,
@@ -42,12 +43,14 @@ import {
   peopleSearchContacts,
   reverseGeocode,
   tasksCreateOrPatch,
+  tasksDeleteTask,
   tasksGetOrCreateListId,
   tasksList,
   fetchGoogleUserinfo,
   sessionTokenProvider,
   type TokenProvider,
 } from "./google-client";
+import { getPickerApiKey } from "./drive-picker";
 import {
   analyticsPrompt,
   analyticsSummary,
@@ -104,7 +107,7 @@ export type MemoDetail = Omit<MemoPreview, "preview"> & {
   people: Array<{ id: string; name: string; email: string | null }>;
   places: Array<{ id: string; name: string; address: string | null; lat: number | null; lng: number | null }>;
   locations: Array<{ id: string; name: string; lat: number | null; lng: number | null }>;
-  event: { googleEventId: string | null; startAt: string; endAt: string; allDay: number } | null;
+  event: { googleEventId: string | null; startAt: string; endAt: string; allDay: number; reminderMinutes: number | null } | null;
 };
 
 export type Category = {
@@ -210,14 +213,22 @@ function memoToDetail(state: LocalState, m: MemoRecord): MemoDetail {
     places,
     locations,
     event: ev
-      ? { googleEventId: ev.googleEventId, startAt: ev.startAt, endAt: ev.endAt, allDay: ev.allDay }
+      ? { googleEventId: ev.googleEventId, startAt: ev.startAt, endAt: ev.endAt, allDay: ev.allDay, reminderMinutes: ev.reminderMinutes ?? null }
       : null,
   };
 }
 
-const MAPS_API_KEY: string | null =
+/**
+ * 장소 검색·역지오코딩용 Google API 키.
+ * 빌드 시점 환경변수(VITE_GOOGLE_MAPS_API_KEY)가 없으면 설정 화면에서 저장한
+ * 키(Drive 파일 선택기와 같은 키, localStorage `naite.google.api_key.v1`)를
+ * 쓴다. 호출 시점에 읽어야 설정에서 저장한 키가 바로 반영된다.
+ */
+export function getMapsApiKey(): string | null {
   // @ts-expect-error Vite 환경에서만 존재
-  (typeof import.meta !== "undefined" && (import.meta.env?.VITE_GOOGLE_MAPS_API_KEY as string | undefined)) || null;
+  const builtIn = (typeof import.meta !== "undefined" && (import.meta.env?.VITE_GOOGLE_MAPS_API_KEY as string | undefined)) || null;
+  return builtIn && builtIn.trim() ? builtIn.trim() : getPickerApiKey();
+}
 
 /* ---------------- API ---------------- */
 
@@ -248,6 +259,10 @@ export const api = {
       mutate((state) => {
         for (const [k, v] of Object.entries(settings)) state.settings[k] = v;
       });
+      // 설정이 바뀌면 App의 자동 동기화 타이머가 다시 시작하게 알린다.
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("naite:settings-changed"));
+      }
       return { ok: true };
     },
   },
@@ -351,7 +366,7 @@ export const api = {
           createdAt: ts,
           updatedAt: ts,
           // 새 메모는 제목 밑에 빈 단락 블록을 기본으로 깐다 (memoaeb 스펙).
-          blocks: [{ id: uid(), position: 0, type: "paragraph", text: "", checked: 0, attachmentId: null, dueDate: null }],
+          blocks: [{ id: uid(), position: 0, type: "paragraph", text: "", checked: 0, attachmentId: null, dueDate: null, parentId: null }],
         });
       });
       return { id };
@@ -390,7 +405,7 @@ export const api = {
       if (!found) throw new Error("not_found");
       return { ok: true };
     },
-    addBlock: async (memoId: string, data: { type: Block["type"]; text?: string; checked?: boolean; dueDate?: string | null }) => {
+    addBlock: async (memoId: string, data: { type: Block["type"]; text?: string; checked?: boolean; dueDate?: string | null; parentId?: string | null }) => {
       const id = uid();
       const ok = mutate((state) => {
         const m = state.memos.find((x) => x.id === memoId);
@@ -405,6 +420,8 @@ export const api = {
           checked: data.checked ? 1 : 0,
           attachmentId: null,
           dueDate: data.dueDate ?? null,
+          // 하위 할일: 상위 체크리스트 블록 id. 상위가 없으면 최상위 블록.
+          parentId: data.parentId ?? null,
         });
         m.updatedAt = nowIso();
         return true;
@@ -417,7 +434,7 @@ export const api = {
         const m = state.memos.find((x) => x.id === memoId);
         if (!m) throw new Error("not_found");
         const text = [m.title, ...m.blocks.filter((b) => b.type === "paragraph" || b.type === "todo").map((b) => b.text)].join("\n");
-        const names = extractKeywords(text);
+        const names = extractKeywords(text, m.title);
         for (const name of names) {
           const kid = getOrCreateKeywordId(state, name);
           if (!state.memoKeywords.some((l) => l.memoId === memoId && l.keywordId === kid)) {
@@ -433,7 +450,7 @@ export const api = {
       let name = data.name ?? "";
       if (!name) {
         // Maps 키가 없으면 역지오코딩 없이 좌표만 저장한다.
-        name = (await reverseGeocode(MAPS_API_KEY, data.lat, data.lng)) ?? `${data.lat.toFixed(5)}, ${data.lng.toFixed(5)}`;
+        name = (await reverseGeocode(getMapsApiKey(), data.lat, data.lng)) ?? `${data.lat.toFixed(5)}, ${data.lng.toFixed(5)}`;
       }
       const result = mutate((state) => {
         const m = state.memos.find((x) => x.id === memoId);
@@ -539,11 +556,11 @@ export const api = {
           const todo = line.match(/^[-*]\s*\[( |x|X)\]\s*(.*)$/);
           if (todo) {
             pos += 1;
-            m.blocks.push({ id: uid(), position: pos, type: "todo", text: todo[2], checked: todo[1].toLowerCase() === "x" ? 1 : 0, attachmentId: null, dueDate: null });
+            m.blocks.push({ id: uid(), position: pos, type: "todo", text: todo[2], checked: todo[1].toLowerCase() === "x" ? 1 : 0, attachmentId: null, dueDate: null, parentId: null });
           } else {
             const heading = line.match(/^#{1,6}\s+(.*)$/);
             pos += 1;
-            m.blocks.push({ id: uid(), position: pos, type: "paragraph", text: heading ? heading[1] : line.replace(/^[-*]\s+/, ""), checked: 0, attachmentId: null, dueDate: null });
+            m.blocks.push({ id: uid(), position: pos, type: "paragraph", text: heading ? heading[1] : line.replace(/^[-*]\s+/, ""), checked: 0, attachmentId: null, dueDate: null, parentId: null });
           }
           added += 1;
         }
@@ -564,6 +581,7 @@ export const api = {
           if (data.position !== undefined) b.position = data.position;
           if (data.dueDate !== undefined) b.dueDate = data.dueDate;
           if (data.attachmentId !== undefined) b.attachmentId = data.attachmentId;
+          if (data.parentId !== undefined) b.parentId = data.parentId;
           m.updatedAt = nowIso();
           return true;
         }
@@ -572,20 +590,51 @@ export const api = {
       if (!found) throw new Error("not_found");
       return { ok: true };
     },
+    /**
+     * 블록 삭제. 체크리스트 블록이면 하위 할일도 함께 지우고, Google Tasks에
+     * 동기화된 할일(상위·하위 포함)은 Google에서도 지운다 (실패해도 로컬 삭제는 진행).
+     */
     remove: async (id: string) => {
-      const found = mutate((state) => {
-        for (const m of state.memos) {
-          const before = m.blocks.length;
-          m.blocks = m.blocks.filter((b) => b.id !== id);
-          if (m.blocks.length !== before) {
-            m.updatedAt = nowIso();
-            return true;
+      const state = loadState();
+      const memo = state.memos.find((m) => m.blocks.some((b) => b.id === id));
+      if (!memo) throw new Error("not_found");
+      // 삭제 대상: 블록 본인 + 하위 할일(재귀).
+      const toRemove = new Set<string>([id]);
+      let grew = true;
+      while (grew) {
+        grew = false;
+        for (const b of memo.blocks) {
+          if (b.parentId && toRemove.has(b.parentId) && !toRemove.has(b.id)) {
+            toRemove.add(b.id);
+            grew = true;
           }
         }
-        return false;
+      }
+      // Google Tasks 연결이 있으면 Google에서도 지운다 (원본의 양방향 동기화와 동일 방향).
+      const links = state.taskLinks.filter((l) => toRemove.has(l.blockId));
+      if (links.length > 0) {
+        try {
+          const listId = links[0].taskListId;
+          for (const l of links) {
+            try {
+              await tasksDeleteTask(tokenProvider, listId, l.googleTaskId);
+            } catch {
+              /* Google 삭제 실패해도 로컬 삭제는 진행한다. */
+            }
+          }
+        } catch {
+          /* 토큰 없음 등으로 목록 조회가 안 되면 로컬 삭제만 한다. */
+        }
+      }
+      mutate((s) => {
+        for (const m of s.memos) {
+          const before = m.blocks.length;
+          m.blocks = m.blocks.filter((b) => !toRemove.has(b.id));
+          if (m.blocks.length !== before) m.updatedAt = nowIso();
+        }
+        s.taskLinks = s.taskLinks.filter((l) => !toRemove.has(l.blockId));
       });
-      if (!found) throw new Error("not_found");
-      return { ok: true };
+      return { ok: true, removedSubtasks: toRemove.size - 1 };
     },
   },
 
@@ -808,7 +857,8 @@ export const api = {
     search: async (q: string) => {
       if (!q.trim()) throw new Error("query_required");
       // Maps 키가 없으면 장소 검색은 미지원 — 에러 대신 빈 결과+상태를 반환한다.
-      const candidates = await geocodeSearch(MAPS_API_KEY, q.trim());
+      // 키는 빌드 환경변수(VITE_GOOGLE_MAPS_API_KEY) 또는 설정 화면에 저장한 키다.
+      const candidates = await geocodeSearch(getMapsApiKey(), q.trim());
       if (candidates === null) {
         return { candidates: [], status: "MAPS_KEY_NOT_CONFIGURED" };
       }
@@ -832,14 +882,20 @@ export const api = {
   },
 
   calendar: {
-    createEvent: async (data: { memoId?: string; title: string; start: string; end?: string; allDay?: boolean; description?: string }) => {
+    createEvent: async (data: { memoId?: string; title: string; start: string; end?: string; allDay?: boolean; description?: string; reminderMinutes?: number | null }) => {
       if (!data.title.trim() || !data.start) throw new Error("title_and_start_required");
+      const reminderMinutes = typeof data.reminderMinutes === "number" ? data.reminderMinutes : null;
       const googleEventId = await calendarCreateEvent(tokenProvider, {
         summary: data.title,
         description: data.description ?? "",
         start: data.start,
         end: data.end ?? data.start,
         allDay: data.allDay === true,
+        // 알림이 있으면 팝업 알림만 쓰고, 없으면 Google 기본 알림을 쓴다.
+        reminders:
+          reminderMinutes === null
+            ? undefined
+            : { useDefault: false, overrides: [{ method: "popup", minutes: reminderMinutes }] },
       });
       if (data.memoId) {
         mutate((state) => {
@@ -850,12 +906,31 @@ export const api = {
             startAt: data.start,
             endAt: data.end ?? data.start,
             allDay: data.allDay === true ? 1 : 0,
+            reminderMinutes,
           };
           if (existing) Object.assign(existing, rec);
           else state.memoEvents.push(rec);
         });
       }
       return { ok: true, googleEventId };
+    },
+    /** 일정 삭제: Google 캘린더에서 지우고, 메모에 연결된 일정 기록도 지운다. */
+    deleteEvent: async (googleEventId: string, memoId?: string) => {
+      if (!googleEventId) throw new Error("event_id_required");
+      await calendarDeleteEvent(tokenProvider, googleEventId);
+      mutate((state) => {
+        state.memoEvents = state.memoEvents.filter(
+          (e) => e.googleEventId !== googleEventId && (memoId === undefined || e.memoId !== memoId),
+        );
+      });
+      return { ok: true };
+    },
+    /** Google 일정 id가 없는 일정 기록만 로컬에서 지운다 (삭제 시 Google에 지울 게 없을 때). */
+    clearLocalEvent: async (memoId: string) => {
+      mutate((state) => {
+        state.memoEvents = state.memoEvents.filter((e) => e.memoId !== memoId);
+      });
+      return { ok: true };
     },
     agenda: async (days = 30) => {
       const items = await calendarListAgenda(tokenProvider, days);
@@ -892,43 +967,82 @@ export const api = {
         taskListId: listId,
       };
     },
+    /**
+     * 체크리스트 블록 1개를 Google Tasks와 동기화한다. 하위 할일이 있으면
+     * 함께 동기화한다 — 하위 할일은 Google Tasks의 subtask(상위 task의
+     * parent)로 만든다 (원본 memoaeb의 parentBlockId 연결과 동일).
+     * 하위 할일만 동기화하면 상위를 먼저 동기화해서 상위 Google task id를 얻는다.
+     */
     sync: async (blockId: string) => {
-      const block = loadState().memos
+      const state = loadState();
+      const found = state.memos
         .flatMap((m) => m.blocks.map((b) => ({ block: b, memoId: m.id })))
         .find((x) => x.block.id === blockId && x.block.type === "todo");
-      if (!block) throw new Error("not_found");
+      if (!found) throw new Error("not_found");
       const listId = await tasksGetOrCreateListId(tokenProvider);
       if (!listId) throw new Error("tasks_list_failed");
-      const existing = loadState().taskLinks.find((l) => l.blockId === blockId);
-      const taskBody: { title: string; status: string; notes?: string; due?: string } = {
-        title: block.block.text,
-        status: block.block.checked === 1 ? "completed" : "needsAction",
-        notes: `naite:block:${blockId}`,
+
+      // 블록 1개를 Google Tasks에 올린다. 상위 Google task id가 있으면 subtask로 만든다.
+      const syncOne = async (
+        block: LocalBlock,
+        parentGoogleTaskId: string | null,
+      ): Promise<string | null> => {
+        const existing = loadState().taskLinks.find((l) => l.blockId === block.id);
+        const taskBody: { title: string; status: string; notes?: string; due?: string } = {
+          title: block.text,
+          status: block.checked === 1 ? "completed" : "needsAction",
+          notes: `naite:block:${block.id}`,
+        };
+        if (block.dueDate) taskBody.due = new Date(block.dueDate).toISOString();
+        let taskId: string | null = null;
+        try {
+          taskId = await tasksCreateOrPatch(
+            tokenProvider,
+            listId,
+            taskBody,
+            existing?.googleTaskId ?? null,
+            parentGoogleTaskId,
+          );
+        } catch (e) {
+          // 삭제된 할일을 PATCH하려다 실패하면 새로 만든다.
+          if (existing) {
+            taskId = await tasksCreateOrPatch(tokenProvider, listId, taskBody, null, parentGoogleTaskId);
+          } else {
+            throw e;
+          }
+        }
+        if (taskId) {
+          mutate((s) => {
+            const link = s.taskLinks.find((l) => l.blockId === block.id);
+            if (link) {
+              link.googleTaskId = taskId as string;
+              link.taskListId = listId;
+            } else {
+              s.taskLinks.push({ blockId: block.id, googleTaskId: taskId as string, taskListId: listId });
+            }
+          });
+        }
+        return taskId;
       };
-      if (block.block.dueDate) taskBody.due = new Date(block.block.dueDate).toISOString();
-      let taskId: string | null = null;
-      try {
-        taskId = await tasksCreateOrPatch(tokenProvider, listId, taskBody, existing?.googleTaskId ?? null);
-      } catch (e) {
-        // 삭제된 할일을 PATCH하려다 실패하면 새로 만든다.
-        if (existing) {
-          taskId = await tasksCreateOrPatch(tokenProvider, listId, taskBody, null);
-        } else {
-          throw e;
+
+      const memo = state.memos.find((m) => m.id === found.memoId);
+      const blocks = memo?.blocks ?? [];
+      let parentGoogleTaskId: string | null = null;
+      if (found.block.parentId) {
+        // 하위 할일이면 상위를 먼저 동기화한다.
+        const parent = blocks.find((b) => b.id === found.block.parentId);
+        if (parent && parent.type === "todo") {
+          parentGoogleTaskId = await syncOne(parent, null);
         }
       }
-      if (taskId) {
-        mutate((state) => {
-          const link = state.taskLinks.find((l) => l.blockId === blockId);
-          if (link) {
-            link.googleTaskId = taskId as string;
-            link.taskListId = listId;
-          } else {
-            state.taskLinks.push({ blockId, googleTaskId: taskId as string, taskListId: listId });
-          }
-        });
+      const taskId = await syncOne(found.block, parentGoogleTaskId);
+      // 하위 할일들을 함께 동기화한다.
+      const children = blocks.filter((b) => b.type === "todo" && b.parentId === blockId);
+      const childIds: Array<string | null> = [];
+      for (const child of children) {
+        childIds.push(await syncOne(child, taskId));
       }
-      return { ok: true, googleTaskId: taskId };
+      return { ok: true, googleTaskId: taskId, subtaskCount: children.length, subtaskTaskIds: childIds };
     },
   },
 
@@ -976,6 +1090,45 @@ export const api = {
         s.settings.last_drive_sync = nowIso();
       });
       return { ok: true, folderId, total: files.length, changed: changed.length, imported, errors };
+    },
+    /**
+     * 자동 동기화 (앱이 열려 있는 동안 주기적으로 호출).
+     * sync()와 같지만, 로컬에서 더 최근에 고친 메모는 Drive 버전으로 덮어쓰지
+     * 않는다 (Drive 파일 수정 시각이 로컬 메모 수정 시각보다 새로울 때만 가져온다).
+     * 앱이 닫히면 동작하지 않는다 — Pages-only에는 백그라운드 동기화가 없다.
+     */
+    autoSync: async () => {
+      const folderId = await driveEnsureMemoFolder(tokenProvider);
+      if (!folderId) throw new Error("drive_folder_failed");
+      const files = await driveListMemoFiles(tokenProvider, folderId);
+      const state = loadState();
+      const since = state.settings.last_drive_sync ?? "1970-01-01T00:00:00Z";
+      const changed = files.filter((f) => (f.modifiedTime ?? "") > since);
+      let imported = 0;
+      let skippedLocalNewer = 0;
+      const errors: Array<{ file: string; error: string }> = [];
+      for (const f of changed) {
+        try {
+          const parsed = await driveDownloadJson<DriveMemoFile>(tokenProvider, f.id);
+          const local = loadState().memos.find((m) => m.id === parsed.id || m.driveFileId === f.id);
+          // 로컬 메모가 Drive 파일보다 새로우면 덮어쓰지 않고 건너뛴다.
+          if (local && local.updatedAt >= (f.modifiedTime ?? "")) {
+            skippedLocalNewer++;
+            continue;
+          }
+          mutate((s) => {
+            upsertMemoFromDrive(s, parsed, f.id);
+          });
+          imported++;
+        } catch (e) {
+          errors.push({ file: f.name ?? f.id ?? "", error: String(e) });
+        }
+      }
+      mutate((s) => {
+        s.settings.last_drive_sync = nowIso();
+        s.settings.last_auto_sync_at = nowIso();
+      });
+      return { ok: true, folderId, total: files.length, changed: changed.length, imported, skippedLocalNewer, errors };
     },
     /** 전체 가져오기: memo 폴더의 모든 메모 파일을 로컬로 복원한다 (마이그레이션 경로). */
     importAll: async (dryRun = false) => {
@@ -1101,6 +1254,11 @@ export const api = {
   analytics: {
     summary: async (): Promise<AnalyticsSummary> => analyticsSummary(loadState()),
     prompt: async (minLinks = 2) => analyticsPrompt(loadState(), minLinks),
+  },
+
+  /** Google Maps API 키 상태 (장소 검색·역지오코딩용). */
+  maps: {
+    hasKey: async () => getMapsApiKey() !== null,
   },
 
   /**

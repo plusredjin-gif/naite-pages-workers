@@ -67,6 +67,14 @@ function todayKey(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/** 알림 분을 "10분 전"·"1시간 전"·"하루 전" 같은 표시로 바꾼다. */
+function reminderLabel(minutes: number | null | undefined): string {
+  if (minutes == null) return "알림 없음";
+  if (minutes >= 1440) return `알림 ${Math.round(minutes / 1440)}일 전`;
+  if (minutes >= 60) return `알림 ${minutes / 60}시간 전`;
+  return `알림 ${minutes}분 전`;
+}
+
 export function MemoEditorView(props: {
   memoId: string;
   onBack: () => void;
@@ -102,6 +110,10 @@ export function MemoEditorView(props: {
   const [eventAllDay, setEventAllDay] = useState(false);
   const [eventStart, setEventStart] = useState("09:00");
   const [eventEnd, setEventEnd] = useState("10:00");
+  /** 팝업 알림: 시작 몇 분 전인지 ("" = 알림 없음). 원본 memoaeb의 "알림"과 동일. */
+  const [eventReminder, setEventReminder] = useState("");
+  const [deleteEventConfirm, setDeleteEventConfirm] = useState(false);
+  const [deletingEvent, setDeletingEvent] = useState(false);
   const [creatingEvent, setCreatingEvent] = useState(false);
   // 음성 패널
   const [voiceOpen, setVoiceOpen] = useState(false);
@@ -124,6 +136,8 @@ export function MemoEditorView(props: {
       setMemo(detail);
       setTitle(detail.title);
       setCategories(cats.categories);
+      // 저장된 알림 설정을 패널에 반영한다.
+      setEventReminder(detail.event?.reminderMinutes != null ? String(detail.event.reminderMinutes) : "");
       const urls: Record<string, { url: string; mime: string }> = {};
       for (const b of detail.blocks) {
         if (!b.attachmentId) continue;
@@ -460,6 +474,7 @@ export function MemoEditorView(props: {
         end,
         allDay: eventAllDay,
         description: "나이테 메모에서 만든 일정입니다.",
+        reminderMinutes: eventReminder === "" ? null : Number(eventReminder),
       });
       setNotice("캘린더에 일정을 만들었습니다.");
       setScheduleOpen(false);
@@ -468,6 +483,36 @@ export function MemoEditorView(props: {
       handleApiError(e, "일정 만들기 실패");
     } finally {
       setCreatingEvent(false);
+    }
+  }
+
+  /** 이 메모의 일정 삭제: Google 캘린더에서 지우고 연결 기록도 지운다 (원본과 동일). */
+  async function handleDeleteEvent() {
+    if (!memo?.event) return;
+    setDeletingEvent(true);
+    try {
+      if (memo.event.googleEventId) {
+        await api.calendar.deleteEvent(memo.event.googleEventId, memoId);
+      } else {
+        await api.calendar.clearLocalEvent(memoId);
+      }
+      setNotice("일정을 삭제했습니다.");
+      setDeleteEventConfirm(false);
+      await load();
+    } catch (e) {
+      handleApiError(e, "일정 삭제 실패");
+    } finally {
+      setDeletingEvent(false);
+    }
+  }
+
+  /** 하위 할일 추가: 상위 체크리스트 블록 바로 아래에 만든다. */
+  async function handleAddSubtask(parentBlock: Block) {
+    try {
+      await api.memos.addBlock(memoId, { type: "todo", parentId: parentBlock.id });
+      await load();
+    } catch (e) {
+      handleApiError(e, "하위 할일 추가 실패");
     }
   }
 
@@ -528,7 +573,7 @@ export function MemoEditorView(props: {
       const res = await api.places.search(placeQuery.trim());
       setPlaceCandidates(res.candidates);
       if (res.status === "MAPS_KEY_NOT_CONFIGURED") {
-        setPlaceStatus("장소 검색은 Google Maps API 키가 필요합니다. 이름만 직접 추가할 수 있습니다.");
+        setPlaceStatus("장소 검색은 Google API 키가 필요합니다. 설정 → Google API 키에서 키를 저장하면 검색이 됩니다 (Drive 파일 선택기와 같은 키). 키가 없어도 이름만 직접 추가할 수 있습니다.");
       }
     } catch (e) {
       handleApiError(e, "장소 검색 실패");
@@ -689,7 +734,15 @@ export function MemoEditorView(props: {
       />
 
       <div className="blocks">
-        {sortedBlocks.map((block) => (
+        {sortedBlocks
+          // 하위 할일은 상위 체크리스트 블록 아래에 그리므로 여기서 건너뛴다.
+          .filter((block) => !block.parentId)
+          .map((block) => {
+            const subtasks =
+              block.type === "todo"
+                ? sortedBlocks.filter((b) => b.type === "todo" && b.parentId === block.id)
+                : [];
+            return (
           <div key={block.id} className="block">
             <div className="block-controls">
               <button type="button" aria-label="위로" onClick={() => void handleMoveBlock(block, -1)}>
@@ -703,30 +756,80 @@ export function MemoEditorView(props: {
               </button>
             </div>
             {block.type === "todo" ? (
-              <div className="todo-block">
-                <input
-                  type="checkbox"
-                  checked={block.checked === 1}
-                  onChange={(e) => void handleBlockChecked(block, e.target.checked)}
-                />
-                <input
-                  type="text"
-                  value={block.text}
-                  placeholder="할 일"
-                  onChange={(e) => void handleBlockText(block, e.target.value)}
-                />
-                <input
-                  type="date"
-                  value={block.dueDate ?? ""}
-                  title="마감일"
-                  onChange={(e) => void handleBlockDueDate(block, e.target.value)}
-                />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="todo-block">
+                  <input
+                    type="checkbox"
+                    checked={block.checked === 1}
+                    onChange={(e) => void handleBlockChecked(block, e.target.checked)}
+                  />
+                  <input
+                    type="text"
+                    value={block.text}
+                    placeholder="할 일"
+                    onChange={(e) => void handleBlockText(block, e.target.value)}
+                  />
+                  <input
+                    type="date"
+                    value={block.dueDate ?? ""}
+                    title="마감일"
+                    onChange={(e) => void handleBlockDueDate(block, e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    title="Google Tasks와 동기화 (하위 할일 포함)"
+                    onClick={() => void handleTaskSync(block)}
+                  >
+                    ↻ Tasks
+                  </button>
+                </div>
+                {/* 하위 할일 (원본: 체크리스트 하위 할일 — Google Tasks subtask로 동기화) */}
+                {subtasks.length > 0 ? (
+                  <div className="subtask-list">
+                    {subtasks.map((sub) => (
+                      <div key={sub.id} className="subtask-row">
+                        <input
+                          type="checkbox"
+                          checked={sub.checked === 1}
+                          onChange={(e) => void handleBlockChecked(sub, e.target.checked)}
+                          aria-label="하위 할일 완료"
+                        />
+                        <input
+                          type="text"
+                          value={sub.text}
+                          placeholder="하위 할 일"
+                          onChange={(e) => void handleBlockText(sub, e.target.value)}
+                        />
+                        <input
+                          type="date"
+                          value={sub.dueDate ?? ""}
+                          title="마감일"
+                          onChange={(e) => void handleBlockDueDate(sub, e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          title="Google Tasks와 동기화"
+                          onClick={() => void handleTaskSync(sub)}
+                        >
+                          ↻
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="하위 할일 삭제"
+                          onClick={() => void handleRemoveBlock(sub)}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
                 <button
                   type="button"
-                  title="Google Tasks와 동기화"
-                  onClick={() => void handleTaskSync(block)}
+                  className="subtask-add"
+                  onClick={() => void handleAddSubtask(block)}
                 >
-                  ↻ Tasks
+                  + 하위 할일
                 </button>
               </div>
             ) : block.type === "photo" ? (
@@ -756,6 +859,7 @@ export function MemoEditorView(props: {
                     {new Date(memo.event.startAt).toLocaleString("ko-KR")}~
                     {new Date(memo.event.endAt).toLocaleString("ko-KR")}
                     {memo.event.allDay === 1 ? " (종일)" : ""}
+                    {memo.event.reminderMinutes != null ? ` · ${reminderLabel(memo.event.reminderMinutes)}` : ""}
                   </p>
                 ) : (
                   <p className="meta">일정 블록 — 아래 일정 패널에서 일정을 만드세요.</p>
@@ -775,7 +879,8 @@ export function MemoEditorView(props: {
               />
             )}
           </div>
-        ))}
+            );
+          })}
       </div>
 
       {/* 하단 아이콘 도구 모음 (원본: 단락·체크리스트·사진·음성메모·일정) */}
@@ -854,8 +959,24 @@ export function MemoEditorView(props: {
               이 메모의 일정: {new Date(memo.event.startAt).toLocaleString("ko-KR")}~
               {new Date(memo.event.endAt).toLocaleString("ko-KR")}
               {memo.event.allDay === 1 ? " (종일)" : ""}
+              {memo.event.reminderMinutes != null
+                ? ` · ${reminderLabel(memo.event.reminderMinutes)}`
+                : ""}
               <br />
-              (일정 삭제는 캘린더에서 직접 해주세요.)
+              {deleteEventConfirm ? (
+                <>
+                  <button type="button" onClick={() => void handleDeleteEvent()} disabled={deletingEvent}>
+                    {deletingEvent ? "삭제 중…" : "정말 삭제 (캘린더에서도 지워집니다)"}
+                  </button>{" "}
+                  <button type="button" onClick={() => setDeleteEventConfirm(false)}>
+                    취소
+                  </button>
+                </>
+              ) : (
+                <button type="button" onClick={() => setDeleteEventConfirm(true)}>
+                  일정 삭제
+                </button>
+              )}
             </p>
           ) : null}
           <div className="toolbar">
@@ -883,6 +1004,16 @@ export function MemoEditorView(props: {
                 </label>
               </>
             ) : null}
+            <label>
+              알림{" "}
+              <select value={eventReminder} onChange={(e) => setEventReminder(e.target.value)}>
+                <option value="">없음</option>
+                <option value="10">10분 전</option>
+                <option value="30">30분 전</option>
+                <option value="60">1시간 전</option>
+                <option value="1440">하루 전</option>
+              </select>
+            </label>
             <button type="button" onClick={() => void handleCreateEvent()} disabled={creatingEvent}>
               {creatingEvent ? "만드는 중…" : "캘린더에 만들기"}
             </button>

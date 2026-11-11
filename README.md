@@ -217,13 +217,13 @@ naite-pages-workers/
 - **편집기 (업그레이드)**: 제목·쓰기/미리보기(MD 간이 렌더링)·고정·삭제 2단계·새 메모 빈 단락 1개, 블록 이동·삭제, 체크리스트 마감일·Tasks 동기화 버튼, 사진 첨부(Drive 업로드·표시), 음성 블록(MediaRecorder 녹음·Drive 저장·재생), 말해서 단락 추가(Web Speech API ko-KR), 일정 패널(날짜·시간·종일→캘린더 생성, 이 메모의 일정 표시), 키워드 칩+추가·삭제, 사람·장소 연결, 현재 위치 저장·지우기, 카테고리·카드 색상 7종, 가져오기 모달(md/txt/html 파일·붙여넣기), 빈 새 메모 닫으면 자동 삭제.
 - **api.ts 추가**: 사람·장소 연결(linkPerson/unlinkPerson/linkPlace/unlinkPlace), 위치 지우기(clearGeo), 키워드 추가·삭제(addKeyword/removeKeyword), 마크다운·HTML 가져오기(importText), 키워드 삭제·이름변경(keywords.remove/rename), 첨부 1건 조회(attachments.get — 사진·음성 블록 재표시용).
 
-### 아직 안 된 것 (솔직 정리)
-- **목록 보기 가상 스크롤**: 원본 VirtualMemoList 대신 30개씩 페이징 유지. 메모가 많으면 페이지 이동이 필요.
-- **체크리스트 하위 할 일**: 원본의 하위 할일 구조는 로컬 저장소 모델에 없어 미이식. 마감일·Tasks 동기화는 있음.
-- **일정 삭제·알림**: 원본은 '이 메모의 일정' 목록·삭제·알림이 있으나, Pages api에 일정 삭제·알림 파라미터가 없어 미이식. 삭제는 Google 캘린더에서 직접 해야 함.
-- **장소 검색 API 키**: 장소 검색(geocoding)은 `VITE_GOOGLE_MAPS_API_KEY`가 없어 미동작 — 이름만 직접 추가 가능. 키를 쓰려면 Google Cloud 콘솔에서 키 발급 + HTTP 리퍼러 제한 후 빌드 시점에 주입해야 함.
-- **키워드 자동 추출 품질**: 원본은 서버 모델 추론, Pages-only판은 브라우저 로컬 규칙 기반 추출이라 품질이 다를 수 있음.
-- **동기화·알림**: Drive 수동 버튼만(자동 백업·백그라운드 동기화·실시간 알림 없음 — Pages-only 구조 한계). access_token(약 1시간) 만료마다 재로그인.
+### 아직 안 된 것 (솔직 정리) — 2026-11-11 기준, 19절에서 6개 항목 완료
+- **목록 보기 가상 스크롤**: 완료 (19절). 100개씩 전체 로드 후 가상 스크롤 렌더링, 행 높이 96px·오버스캔 5행·최대 5000개.
+- **체크리스트 하위 할 일**: 완료 (19절). 하위 할일 생성·완료·삭제, 상위 삭제 시 연쇄 삭제, Google Tasks `parent` 연결.
+- **일정 삭제·알림**: 완료 (19절). 일정 삭제(2단계 확인)·알림 시간(없음·5/10/15/30분·1시간) 설정, 캘린더 팝업 알림.
+- **장소 검색 API 키**: 완료 (19절). 설정에 저장한 Google API 키(`naite.google.api_key.v1`)를 장소 검색·역지오코딩에 연결. 키 없으면 설정 안내.
+- **키워드 자동 추출 품질**: 완료 (19절). 조사·어미 제거 원형화 + 불용어 확대 + NO_STRIP_WORDS 예외 목록. 원본은 서버 모델 추론이라 품질이 완전히 같지는 않음 — 로컬 규칙 기반의 한계.
+- **동기화·알림**: 앱이 열려 있는 동안 주기적 자동 동기화 완료 (19절, 기본 5분·설정 토글). **백그라운드(앱 닫힌 상태) 동기화·실시간 알림은 Pages-only 구조상 안 된다** — 서버·크론이 없어서, 앱을 닫으면 동기화가 멈춘다. access_token(약 1시간) 만료마다 재로그인.
 - **바이너리 에셋 GitHub 미반영**: 스냅샷 푸시는 UTF-8 텍스트만 가능해서 `frontend/public/assets/`의 PNG·MP4·HatchMaps JS는 GitHub에 올라가지 않음. Pages 배포(로컬 dist 직접 업로드)에는 포함돼 정상 동작하지만, 저장소만 새로 받으면 로고·주전자 이미지가 없음. 필요하면 별도 경로로 올려야 함.
 
 ### 빌드·배포·확인 (2026-11-10)
@@ -260,7 +260,7 @@ naite-pages-workers/
   8. **레이아웃 폭**: 로그인된 셸은 860px → 1240px로 넓힘 (원본처럼).
 - **검증 (2026-11-10, 실제 렌더링)**: 프로덕션 번들은 로그인 뒤라 직접 못 열어서, mock 인증 빌드(`VITE_AUTH_MOCK=true`, 프로덕션 dist와 별도 `dist-mock`)를 로컬 Chromium 대신 jsdom + esbuild IIFE 번들로 렌더링. 원본 스크린샷과 같은 데모 데이터(메모 5개·카테고리 7개·키워드 #가나다·장소 성남)를 localStorage에 심고 DOM·상호작용 전수 확인: 사이드바 4개 섹션·보기 항목·카테고리 7개·#가나다·성남, 제목 "전체 메모"·기간·정렬, pill 5개(격자 활성), 고정됨/메모 섹션 + 카드 5개, 고정됨 클릭→제목 "고정됨"·카드 1개, 목록 pill→5개, 온톨로지·분석→온톨로지+분석 h2 동시 표시·키워드 관리 카드 있음·분리 탭 없음, 키워드 클릭→"#가나다"·카드 1개, 카테고리 개인 클릭→"개인"·카드 1개, 설정→설정 화면. JS 에러 0건. (참고: VM의 meta-chromium은 Hatch WebGL 도메인 정책이 필요해 직접 실행이 안 돼서 jsdom으로 검증했고, 최종 눈으로 보는 확인은 jin 폰에서.)
 - 빌드: `tsc --noEmit` + Vite 통과 (JS 292.08KB). 배포: Pages `plustree-memo` 직접 업로드, 배포 `5a12ec5c`. 확인: `naite.plustree.net`·`memo.plustree.net`·`plustree-memo.pages.dev` 모두 새 번들(`index-CihaxVhG.js`) 서빙.
-- 남은 것: 목록 가상 스크롤·체크리스트 하위 할일·일정 삭제·알림·장소 검색 API 키·키워드 추출 품질 차이는 13절과 동일하게 미이식.
+- 남은 것: 위 6개 항목은 2026-11-11 19절에서 완료 (13절 갱신).
 
 ## 16. 아이콘 모양 맞추기 — 보기 pill·사이드바 모바일 아이콘 (2026-11-10)
 
@@ -289,7 +289,7 @@ naite-pages-workers/
 - **폰트** (jin 추가 요청): 앱 전체 기본 폰트는 한컴 말랑말랑체. 이미 `styles.css`에 `@font-face`(Regular/Bold, 눈누 미러 jsDelivr CDN woff2, `font-display: swap`)와 `body{font-family: HancomMalangMalang, system-ui, -apple-system, Malgun Gothic, sans-serif}`가 있었고, 이번에 woff2 CDN 로드를 직접 확인함 — Regular 200 (1,029,116 bytes), Bold 200 (1,056,372 bytes), 둘 다 `font/woff2`. 빌드 CSS에 @font-face·body 폰트·폴백 체인 포함 확인. 유일한 예외는 AI JSON 입력란(`.json-input`)의 monospace로, 코드 입력란이라 의도적으로 유지.
 - 검증 (jsdom + esbuild IIFE mock 빌드, 데모 데이터 동일): pill 5개 전부 원형 SVG + 단어, 사이드바 16개 행 전부 원형 SVG·이모지 0건, 카테고리 아이콘 선택 18개 전부 원형 SVG, 카테고리 목록 7개 전부 원형 SVG, 사람 화면 이동 정상, 편집기 도구 모음 5개 전부 라인 SVG·이모지 0건, JS 에러 0건.
 - 빌드: `tsc --noEmit` + Vite 통과 (JS 300.18KB). 배포: Pages `plustree-memo` 직접 업로드, 배포 `14875db8`. 확인: `naite.plustree.net`·`memo.plustree.net`·`plustree-memo.pages.dev` 모두 새 번들(`index-DzGE7sTR.js`) 서빙.
-- 남은 것: 목록 가상 스크롤·체크리스트 하위 할일·일정 삭제·알림·장소 검색 API 키·키워드 추출 품질 차이는 13절과 동일하게 미이식.
+- 남은 것: 위 6개 항목은 2026-11-11 19절에서 완료 (13절 갱신).
 
 ## 18. 심사받기 쉽게 만들기 — 최소 범위·Picker·개인정보처리방침 (2026-11-10)
 
@@ -313,3 +313,55 @@ naite-pages-workers/
   2. **새 메모 + 버튼 가림**: 모바일 FAB(주황 + 버튼)가 메모 카드 날짜·Drive 저장 표시를 가림. 아래로 스크롤하면 FAB이 숨고 위로 올리면 다시 보이게 (`App.tsx` 스크롤 감지 + `.fab-hidden`), 모바일 하단 여백을 96px → 140px로 늘림.
 - **원본 기준 재확인**: 도메인 버전이 원본 memoaeb v32와 똑같이 보이는 게 최종 목표. 모바일에서도 원본 구조(사이드바 보기·카테고리·키워드·장소 섹션, 상단 로고 옆 검색창, 제목 줄 + 기간·정렬, 보기 pill 줄, 메모 격자 카드)가 그대로 보이게 한다. 사이드바는 모바일에서 아이콘 행으로 접히지만 내용·순서는 원본과 같다.
 - 빌드·배포·확인 (2026-11-10): `tsc --noEmit` + Vite 통과 (JS 310.24KB, 번들에 클라이언트 ID 인라인·`drive.file`/`calendar.events` 포함, 전체 `drive`·`calendar` 범위 요청 없음 — 기존 전체 범위 토큰 허용용 읽기 전용 검사 1건만 남음). 배포: Pages `plustree-memo` 직접 업로드, 배포 `1227d8e8`. 확인: `naite.plustree.net`·`memo.plustree.net`·`plustree-memo.pages.dev` 모두 새 번들(`index-BU-QHLsv.js`) 서빙, 라이브 번들 MD5가 로컬 빌드와 일치. `/privacy` 페이지 라이브 확인(한국어 전문 + 영문 요약 전부 표시). 로그인 안내 크롤은 캐시로 옛날 문구가 보였으나 라이브 번들 직접 확인으로 새 문구(`drive.file`·파일 선택기) 포함 확인. Picker 실제 동작은 Google API 키가 없어서 jin 키 등록 후 확인 필요.
+
+## 19. 안 된 것 6개 항목 구현 (2026-11-11)
+
+- jin 지시: "안된것들 진행해" — 13절 "아직 안 된 것" 목록 6개 항목을 원본 memoaeb v32 동작 기준으로 구현.
+- **1. 목록 가상 스크롤** (`frontend/src/views/MemoListView.tsx`, `styles.css`): 30개씩 페이징 → 100개씩 전체 로드(최대 5000개) 후 가상 스크롤 렌더링. 행 높이 96px 고정(행 안 제목·미리보기·날짜 1줄 말줄임), 오버스캔 5행, 보이는 행만 절대 위치로 그림. 스크롤 시 다시 그림. 검증: jsdom 렌더링 테스트 — 150개 메모에서 12행만 렌더링, 스페이서 높이 14400px.
+- **2. 체크리스트 하위 할일** (`local-store.ts` `Block.parentId`, `api.ts`, `MemoEditorView.tsx`, `ScheduleView.tsx`, `google-client.ts`):
+  1. 모델: `Block.parentId` (상위 체크리스트 블록 id), Drive 직렬화·복원에 포함, 예전 데이터는 `parentId: null`로 정규화. `blocks.remove`는 하위 할일도 함께 삭제(연쇄 삭제).
+  2. 편집기: 체크리스트 블록 옆 "하위 할일 추가" 버튼, 하위 할일은 들여쓰기 + "↳" 표시, 체크·삭제 가능.
+  3. Google Tasks 연동: `tasks.sync`가 상위 할일을 먼저 동기화한 뒤 하위 할일을 `POST /tasks/v1/lists/{listId}/tasks?parent={상위 googleTaskId}`로 생성해 parent 연결. 하위만 동기화해도 상위를 먼저 동기화한다. 상위 삭제 시 연결된 Google 할일도 삭제한다 (`tasksDeleteTask`).
+  4. 일정 화면 할 일 목록도 하위 할일을 들여쓰기로 표시한다.
+  5. 검증: 하위 할일 생성·완료·Drive 직렬화·복원·연쇄 삭제, Tasks `parent` 파라미터 호출까지 fetch 목으로 확인.
+- **3. 일정 삭제·알림** (`local-store.ts` `MemoEventRecord.reminderMinutes`, `api.ts`, `google-client.ts`, `MemoEditorView.tsx`, `ScheduleView.tsx`):
+  1. 알림: 일정 만들 때 "알림" 선택 (없음·시작 5분 전·10분 전·15분 전·30분 전·1시간 전). `calendar.createEvent`가 Google Calendar API에 `reminders: { useDefault: false, overrides: [{ method: "popup", minutes }] }`로 보낸다. 종일 일정은 알림이 0분(자정) 기준으로 동작하지 않을 수 있어 안내 문구를 둔다.
+  2. 삭제: 메모 편집기 일정 패널·일정 화면 아젠다에 "이 일정 삭제" 버튼 (2단계 확인). `calendar.deleteEvent`는 Google에서 삭제한 뒤 메모의 일정 연결 기록도 지운다 (`clearLocalEvent`).
+  3. 원본과 달리 Google에서 지운 일정의 연결 행을 지우는 서버 훅은 없고, 삭제 버튼을 누른 메모의 연결만 지운다.
+  4. 검증: 알림 30분 생성 요청 본문에 `popup`·`minutes: 30` 포함, 삭제 후 연결 기록 null, DELETE 호출 확인.
+- **4. 장소 검색 API 키** (`frontend/src/api.ts` `getMapsApiKey()`, `drive-picker.ts`, `SettingsView.tsx`, `PlacesView.tsx`, `MemoEditorView.tsx`):
+  1. 장소 검색·역지오코딩이 쓰던 `MAPS_API_KEY`는 빌드 환경변수(`VITE_GOOGLE_MAPS_API_KEY`)만 읽었는데, 이제 설정 화면에 저장한 Google API 키(localStorage `naite.google.api_key.v1`)도 쓴다. 순서: 빌드 키 → 설정 저장 키. 둘 다 없으면 키 없음 안내.
+  2. 설정 화면에 "Google API 키" 카드를 새로 만들었다 (Picker 키와 같은 저장소, 같은 입력란 — Picker·장소 검색이 하나의 키를 공유한다). 키 저장·삭제·빌드 키 사용 여부 표시.
+  3. PlacesView·편집기 장소 검색의 안내 문구를 "설정 → Google API 키"로 바꿨다.
+  4. API 키 생성은 jin 몫 (Google Cloud Console에서 직접). 키가 없으면 장소 이름만 직접 추가 가능.
+- **5. 키워드 추출 품질** (`frontend/src/local-store.ts` `extractKeywords`):
+  1. 조사·어미 제거 원형화: 조사("은/는/이/가/을/를/의/에서/에게/으로…" 긴 것부터), 어미("습니다/입니다/합니다/했던/하면…"), 복수 "들"을 떼고, 원형이 2자 미만이면 버린다.
+  2. 예외 목록 `NO_STRIP_WORDS`: "고양이"→"고양" 같은 오절단을 막는다 (고양이·호랑이·강아지·송아지·할머니·할아버지·아버지·어머니·어린이·원숭이·코끼리·병아리·토끼·다람쥐·이야기·국가·작가·평가·증가·참가·효과·결과·가격·추가·통과·불가·전문가·참가자). 조사만 떼고 완성 단어가 되면 어미를 더 떼지 않는다 ("이야기"의 "기"를 떼면 "이야"가 되는 문제 수정).
+  3. 불용어 대폭 확대 (조사·어미·대명사·시간·지시어·흔한 동사·영문 관사·전치사 등).
+  4. 가중치: 제목 단어 +3, 해시태그 +10, 본문 빈도 +1 (2회 이상만), 상위 10개. 더 긴 키워드에 포함되는 짧은 키워드는 제외.
+  5. 한계: 원본은 서버 모델 추론이라 의미 기반 추출이 되지만, 배포판은 로컬 규칙 기반이라 품질이 완전히 같지는 않다. 테스트 14건 통과 (고양이·국가·이야기 원형 유지, "이것은"·"입니다" 제외, 한 번만 나온 단어 제외 등).
+- **6. 자동 동기화** (`frontend/src/api.ts` `drive.autoSync`, `frontend/src/App.tsx`, `frontend/src/views/SettingsView.tsx`):
+  1. 앱이 열려 있는 동안 주기적으로 Drive에서 바뀐 메모를 가져온다. 기본 5분 간격, 설정에서 끄고 켤 수 있고 간격(5·10·30분) 선택 가능. 탭이 안 보이면 건너뛴다. 가져온 메모가 있으면 알림 + 목록 새로고침.
+  2. 안전장치: **로컬 메모가 Drive 파일보다 새로우면 덮어쓰지 않고 건너뛴다** (새로 만든 메모가 Drive 동기화 전인 경우 보호). 마지막 동기화 이후 바뀐 파일만 본다.
+  3. 설정 변경은 `naite:settings-changed` 이벤트로 App 타이머가 바로 다시 시작한다. 토큰 만료 시 조용히 멈춘다 (알림 스팸 방지, 수동 동기화·다시 로그인이 안내한다).
+  4. **백그라운드(앱 닫힌 상태) 동기화는 Pages-only 구조상 안 된다** — 서버·크론이 없어서 앱을 닫으면 동기화가 멈춘다. 이 점은 13절에도 명시.
+  5. 검증: fetch 목으로 자동 동기화 가드 확인 — 로컬이 더 새 파일은 건너뜀(`skippedLocalNewer: 1`), 드라이브가 더 새 파일만 가져옴(`imported: 1`), `last_auto_sync_at` 기록.
+- 검증 (2026-11-11): `tsc --noEmit` 통과. 로직 테스트 31건 전부 통과 (키워드 14·하위 할일 5·일정 4·Tasks 4·자동 동기화 4 — `/tmp/naite-test/logic.entry.ts`, esbuild + node, Google API fetch 목). 가상 스크롤 jsdom 렌더링 테스트 통과 (150개 메모 → 12행 렌더링, 스페이서 14400px — `/tmp/naite-test/render.entry.tsx`). 실제 Google API(캘린더·Tasks·Drive·장소 검색) 동작은 jin 계정·API 키가 없어서 실데이터로 확인 못 함 — jin이 로그인·API 키 등록 후 확인 필요.
+- 빌드·배포·확인 (2026-11-11): `tsc --noEmit` + Vite 통과 (JS 324.00KB, CSS 18.23KB, 번들에 클라이언트 ID·`drive.file`·`calendar.events` 포함). 배포: Pages `plustree-memo` 직접 업로드, 배포 `4d100570` (2026-11-11 03:47 UTC). 확인: `naite.plustree.net`·`memo.plustree.net`·`plustree-memo.pages.dev` 모두 새 번들(`index-S7t3Ia4N.js`) 서빙, 라이브 번들 MD5가 로컬 빌드와 일치(`0c9cba66f6e66d1ed2d12015f12e060e`), 라이브 번들에 `auto_sync_enabled`·`가상 스크롤`·`하위 할일 추가`·`일정 삭제`·`deleteEvent` 포함 확인. `/privacy` 200 확인. (참고: 배포 스크립트를 확인용으로 한 번 더 돌려 같은 내용의 배포가 2개 생겼으나(`f513b7cf`·`4d100570`), 라이브는 최신 `4d100570` 내용과 동일하다.)
+
+## 20. 앱 전체 스페이스 기준 맞춤 + 디자인 토큰 (2026-11-11)
+
+- jin 지시: 스페이스(원본 memoaeb) 디자인과 배포판 차이가 크다. 히어로만이 아니라 앱 전체를 스페이스 기준으로 맞출 것. 제목 잘림("전체 …")·+ 버튼 가림은 1227d8e8에서 고쳤다고 했는데 스크린샷에 여전히 보인다는 지적도 함께 확인.
+- **스크린샷 정정**: jin이 22:54~22:55에 보낸 2장 중 1장은 스페이스 원본(제목 "전체 …"로 잘림·+ 버튼이 "Drive 저장됨" 가림)이고, 2장이 배포판(제목 "전체 메모" 전체 표시 — 1227d8e8 수정이 라이브에 반영됨 확인, + 버튼이 날짜 가림). 즉 제목 잘림은 배포판이 아니라 원본 화면을 본 것이다. 라이브 번들에 `fab-hidden` 포함도 확인됨.
+- **제목 CSS 모순 수정** (`styles.css`): 모바일 `.title-row h1`의 `overflow: hidden`·`text-overflow: ellipsis` 제거 (주석 "제목은 한 줄로 전부 보이고"와 모순이었음). 이제 nowrap + flex-wrap으로 제목은 전부 보이고, 전체 기간·최근 수정순은 아래 줄 오른쪽으로 내린다. 360px 렌더링에서 "전체 메모" 잘림 없음 확인 (`scrollWidth == clientWidth`).
+- **모바일 FAB 제거** (`styles.css`): 떠 있는 + 버튼이 카드 글자(날짜·Drive 저장됨)를 가린다는 지적이 반복돼, 모바일에서 FAB을 아예 안 보이게 했다. 대신 상단 full-width "+ 새 메모" 버튼 + GridView/MemoListView 목록 하단(페이지네이션 아래)에 "+ 새 메모" 버튼(`.list-bottom-new`, `onNew` prop → App `handleNewMemo`) 추가. 이는 스페이스와 의도적으로 다른 부분 (스페이스의 FAB가 두 스크린샷에서 모두 글자를 가리고 있음). 360px에서 FAB `display: none`, 하단 버튼 표시 확인.
+- **히어로 스페이스 맞춤** (`HeroView.tsx`·`HeroView.css`, `GoogleLoginButton.tsx` 신규): 모바일 상단 바(햄버거·주전자 아바타·"..." + 드롭다운: 로그인·개인정보처리방침·기능 소개), 주황 소제목 "Google Drive 연동 메모", 가운데 정렬 큰 제목 2줄 고정(`.hero-line` block + nowrap — "메모" 분리 방지), 설명 문구 원본 그대로, 흰색 pill 로그인 버튼(Google G 로고 SVG + "Google 계정으로 로그인"), 작은 문구 "따로 회원가입 없이, 쓰던 Google 계정으로 바로 시작합니다.", 주전자 이젤 그림 모바일 크게(360px에서 320px). 로고는 원본처럼 왼쪽 정렬, 설명·작은 문구는 `word-break: keep-all`로 단어 중간 끊김 방지. 참고: 스페이스 스크린샷 상단의 햄버거·아바타·"..." 바는 Muse 앱 자체 크롬일 가능성이 있으나, 지시대로 앱 내 모바일 상단 바로 재현했다.
+- **Drive 저장됨 배지 추가** (`GridView.tsx`·`MemoListView.tsx`, `.memo-drive-badge`): 원본 카드에 있는 초록 "Drive 저장됨" 배지가 배포판 카드에 아예 없어서 추가. `driveFileId`가 있는 메모만 표시 (격자 카드: 카테고리 옆, 목록 행: 날짜 앞).
+- **디자인 토큰** (`frontend/src/styles.css` `:root`, 2026-11-11 추가): 빌더 프레임워크는 이식하지 않고, 렌더링된 원본(스페이스 패널·스크린샷)에서 보이는 스타일만 CSS 변수로 옮겼다. 배포판은 Vite + React + plain CSS 구조 그대로. 토큰 목록 (앞으로 디자인 고칠 때는 이 변수만 보면 된다):
+  - 색: `--naite-bg: #fafaf5` (페이지 배경), `--naite-card: #ffffff` (카드), `--naite-orange: #e8590c` (주황: 버튼·소제목·강조), `--naite-orange-dark: #c2571b`, `--naite-brown: #b98a4e`, `--naite-ink: #222222` (본문), `--naite-ink-soft: #333333`, `--naite-gray: #555555`, `--naite-gray-2: #666666`, `--naite-muted: #888888` (메타), `--naite-faint: #999999`, `--naite-pale: #aaaaaa` (섹션 라벨), `--naite-green: #2e9e5b` (Drive 저장됨·기간 초록), `--naite-border: #e5e5e5`, `--naite-border-strong: #dddddd`, `--naite-border-soft: #e0e0e0`, `--naite-border-light: #eeeeee`, `--naite-cream: #fff8ef`, `--naite-warm: #f0ede4`, `--naite-warm-2: #f5e9d8`, `--naite-notice-bg: #fff3cd`, `--naite-notice-border: #e6c87a`, `--naite-on-orange: #ffffff`, `--naite-on-dark: #ffffff`, `--naite-brown-dark: #6b4a2f`, `--naite-orange-tint: #fff3e8`, `--naite-warm-3: #f3ede2`, `--naite-offwhite: #fafafa`, `--naite-overlay: rgba(0,0,0,0.45)` (모달 배경).
+  - 모양: `--radius-lg: 20px` (메모 카드 — 원본처럼 크게, 기존 10px에서 변경), `--radius-md: 12px`, `--radius-xs: 4px`, `--radius-sm: 8px`, `--radius-pill: 999px`, `--shadow-card: 0 2px 8px rgba(0,0,0,0.06)`, `--shadow-btn: 0 2px 8px rgba(0,0,0,0.12)`, `--shadow-fab: 0 4px 12px rgba(0,0,0,0.25)`.
+  - 폰트 크기: `--font-hero: 44px` (데스크톱), `--font-hero-mobile: 40px`, `--font-title: 20px`, `--font-title-mobile: 18px`, `--font-card-title: 17px`, `--font-body: 15px`, `--font-meta: 13px`.
+  - 간격·크기: `--gap: 12px`, `--fab-size: 56px`.
+  - 적용 범위: `styles.css` + `views/*.css`의 색상·둥근 정도·그림자를 전부 변수로 교체 (MindmapView/OntologyView는 색상 없음). **주의 (2026-11-11 실수 기록)**: sed로 일괄 교체할 때 `:root` 정의 자체의 hex까지 바뀌어 `--naite-orange: var(--naite-orange)` 같은 자기 참조 순환이 생겼고, 소제목이 주황 대신 검정으로 렌더링됐다. `:root` 블록을 올바른 literal 값으로 다시 써서 해결. 앞으로 토큰 교체 시 `:root` 정의는 건드리지 말 것.
+- **동그란 라인 아이콘·말랑말랑체는 유지** (jin 선호, 2026-11-10). 원본 유니코드·이모지로 바꾸지 않음.
+- 검증 (2026-11-11): `tsc --noEmit` + Vite 통과 (JS 327.27KB, CSS 23.90KB). 배포: Pages `plustree-memo` 직접 업로드, 최신 배포는 JS `index-DZFKgGLF.js`·CSS `index-CXp5r51v.css` (라이브 번들 MD5 로컬 빌드와 일치, `memo-drive-badge` 포함 확인). 360px 실제 렌더링(Playwright, 라이브 히어로 + mock 빌드 목록) 확인: 히어로(소제목 주황·제목 2줄·흰색 pill 버튼·큰 주전자 그림), 목록("전체 메모" 전체 표시·전체 기간·최근 수정순 아래 줄·아이콘만 pill·카드 radius 20px·Drive 저장됨 배지·하단 + 새 메모 버튼·FAB 없음). GitHub 푸시는 미완료 — main은 아직 `c1942f8`. 승인 카드 없이 반복 푸시 금지, 부모 보고 후 승인 대기.

@@ -29,6 +29,8 @@ export type Block = {
   checked: number;
   attachmentId: string | null;
   dueDate: string | null;
+  /** 하위 할일: 이 블록이 속한 상위 체크리스트 블록 id (없으면 최상위). */
+  parentId: string | null;
 };
 
 export type MemoRecord = {
@@ -81,6 +83,8 @@ export type MemoEventRecord = {
   startAt: string;
   endAt: string;
   allDay: number;
+  /** 팝업 알림: 시작 몇 분 전인지 (null = 알림 없음). 원본 memoaeb의 "알림"과 동일. */
+  reminderMinutes: number | null;
 };
 export type TaskLink = { blockId: string; googleTaskId: string; taskListId: string };
 export type AttachmentRecord = {
@@ -151,7 +155,17 @@ export function loadState(): LocalState {
     if (!raw) return emptyState();
     const parsed = JSON.parse(raw) as LocalState;
     if (parsed.version !== 1 || !Array.isArray(parsed.memos)) return emptyState();
-    return { ...emptyState(), ...parsed };
+    const state = { ...emptyState(), ...parsed };
+    // 예전 데이터에는 없는 필드를 기본값으로 채운다 (하위 할일·알림).
+    for (const m of state.memos) {
+      for (const b of m.blocks) {
+        if (b.parentId === undefined) b.parentId = null;
+      }
+    }
+    for (const e of state.memoEvents) {
+      if (e.reminderMinutes === undefined) e.reminderMinutes = null;
+    }
+    return state;
   } catch {
     return emptyState();
   }
@@ -169,30 +183,136 @@ export function nowIso(): string {
   return new Date().toISOString();
 }
 
-/* ---------------- 키워드 자동 추출 (규칙 기반 — worker/api.ts와 동일) ---------------- */
+/* ---------------- 키워드 자동 추출 (규칙 기반) ----------------
+ *
+ * 원본(memoaeb)은 본문 핵심 키워드를 모델 추론으로 뽑는다. Pages-only판은
+ * 브라우저에서 모델을 쓸 수 없어 규칙 기반으로 근사한다. 규칙은 원본의
+ * 동작(해시태그 + 본문 핵심 단어)에 맞춘다:
+ *  - 해시태그는 그대로 키워드 (가중치 +10)
+ *  - 제목에 나온 단어는 가중치 +3 (제목은 메모의 주제라서)
+ *  - 본문 단어는 빈도 가중치. 조사·어미를 떼어 원형으로 합친다
+ *    ("메모를"·"메모는"·"메모가" → "메모") — 안 그러면 같은 단어가
+ *    여러 키워드로 쪼개진다.
+ *  - 불용어(조사·동사·대명사·일반명사)는 제외. 한 번만 나온 본문 단어는
+ *    뽑지 않는다 (단, 제목·해시태그에 있으면 뽑는다).
+ * Worker(api.ts)의 구버전 규칙(단순 빈도, 조사 미처리)과는 다르다 —
+ * Worker는 미사용이라 이 파일의 규칙이 기준이다.
+ */
 
 const KEYWORD_STOPWORDS = new Set([
-  "이", "그", "저", "것", "수", "등", "및", "또", "더", "잘", "좀", "것이다",
-  "있다", "없다", "하다", "되다", "이다", "가다", "오다", "보다", "이다.",
-  "the", "and", "for", "with", "this", "that", "from", "into",
+  // 대명사·지시어
+  "이", "그", "저", "것", "이것", "그것", "저것", "여기", "거기", "저기",
+  "이곳", "그곳", "저곳", "누구", "무엇", "뭐", "어디", "언제", "왜", "어떻게",
+  // 일반 동사·형용사 어간
+  "있다", "없다", "하다", "되다", "이다", "가다", "오다", "보다", "주다", "받다",
+  "쓰다", "만들다", "알다", "모르다", "주다", "먹다", "자다", "일하다", "공부하다",
+  "좋다", "나쁘다", "크다", "작다", "많다", "적다", "빠르다", "느리다", "새롭다",
+  "같다", "다르다", "필요하다", "가능하다", "중요하다", "생각하다", "느끼다",
+  // 일반명사·시간·수량
+  "수", "등", "및", "때", "곳", "일", "사람", "경우", "방법", "정도", "부분",
+  "오늘", "내일", "어제", "지금", "아침", "점심", "저녁", "오전", "오후",
+  "년", "월", "주", "시간", "분", "초", "개", "번", "차", "명", "가지",
+  // 접속·부사
+  "또", "더", "잘", "좀", "그리고", "그래서", "그러나", "하지만", "만약", "아마",
+  "정말", "너무", "아주", "매우", "조금", "많이", "다시", "먼저", "나중", "항상",
+  "가끔", "보통", "이후", "이전", "통해", "위해", "대해", "관해", "대한",
+  "the", "and", "for", "with", "this", "that", "from", "into", "are", "was",
+  "were", "been", "being", "have", "has", "had", "will", "would", "can",
+  "could", "should", "not", "but", "you", "your", "our", "their", "his",
+  "her", "its", "all", "any", "some", "more", "most", "other", "when",
+  "where", "which", "who", "whom", "how", "what", "why", "about", "after",
+  "before", "between", "through", "during", "under", "over", "again",
+  "once", "here", "there", "then", "than", "also", "just", "only", "even",
+  "still", "already", "yet",
 ]);
 
-export function extractKeywords(text: string): string[] {
+/** 긴 것부터 (예: "에서는"을 "에서"보다 먼저 떼야 한다). */
+const PARTICLE_SUFFIXES = [
+  "에서는", "에게는", "한테서", "로부터", "까지", "부터", "에서", "에게", "한테",
+  "으로", "로", "와", "과", "의", "에", "은", "는", "이", "가", "을", "를",
+  "도", "만", "조차", "마저", "이나", "나", "든지", "라도", "이야", "야",
+];
+
+/** 동사·형용사 어미 (긴 것부터). 남은 어간이 2자 이상일 때만 뗀다. */
+const VERB_ENDINGS = [
+  "습니다", "입니다", "합니다", "됩니다", "했습니다", "합니다",
+  "하는", "했던", "하는", "이고", "이며", "해서", "하면", "하기",
+  "한", "된", "될", "할", "임", "기", "음",
+];
+
+/** 조사·어미 제거에서 건드리면 안 되는 완성 단어 (예: "고양이"→"고양" 금지). */
+const NO_STRIP_WORDS = new Set([
+  "고양이", "호랑이", "강아지", "송아지", "할머니", "할아버지", "아버지", "어머니",
+  "어린이", "원숭이", "코끼리", "병아리", "토끼", "다람쥐", "이야기",
+  "국가", "작가", "평가", "증가", "참가", "효과", "결과", "가격", "추가",
+  "통과", "불가", "전문가", "참가자",
+]);
+
+/** 한국어 토큰을 원형으로 만든다. 원형이 2자 미만이면 null. */
+function normalizeKoreanToken(token: string): string | null {
+  if (NO_STRIP_WORDS.has(token)) return token;
+  let w = token;
+  // 복수 "들" (예: "사람들" → "사람")
+  if (w.length >= 3 && w.endsWith("들")) w = w.slice(0, -1);
+  for (const suf of PARTICLE_SUFFIXES) {
+    if (w.length - suf.length >= 2 && w.endsWith(suf)) {
+      w = w.slice(0, -suf.length);
+      break;
+    }
+  }
+  // 조사만 떼고 이미 완성 단어면 어미를 더 떼지 않는다 ("이야기"의 "기"를 떼면 "이야"가 된다).
+  if (NO_STRIP_WORDS.has(w)) return w;
+  for (const end of VERB_ENDINGS) {
+    if (w.length - end.length >= 2 && w.endsWith(end)) {
+      w = w.slice(0, -end.length);
+      break;
+    }
+  }
+  if (NO_STRIP_WORDS.has(w)) return w;
+  if (w.length < 2) return null;
+  if (KEYWORD_STOPWORDS.has(w)) return null;
+  if (/^\d+$/.test(w)) return null;
+  return w;
+}
+
+function normalizeLatinToken(token: string): string | null {
+  const w = token.toLowerCase();
+  if (w.length < 2) return null;
+  if (KEYWORD_STOPWORDS.has(w)) return null;
+  if (/^\d+$/.test(w)) return null;
+  return w;
+}
+
+export function extractKeywords(text: string, title = ""): string[] {
   const found = new Map<string, number>();
+  const add = (word: string | null, weight: number) => {
+    if (!word) return;
+    found.set(word, (found.get(word) ?? 0) + weight);
+  };
+  // 해시태그는 그대로 키워드 (원본과 동일).
   for (const m of text.matchAll(/#([^\s#.,!?()[\]{}"']+)/g)) {
     const tag = m[1].trim();
-    if (tag.length >= 2) found.set(tag, (found.get(tag) ?? 0) + 10);
+    if (tag.length >= 2) add(tag, 10);
   }
-  for (const m of text.matchAll(/[가-힣]{2,}|[A-Za-z][A-Za-z0-9_-]{1,}/g)) {
-    const w = m[0];
-    if (KEYWORD_STOPWORDS.has(w)) continue;
-    found.set(w, (found.get(w) ?? 0) + 1);
-  }
-  return [...found.entries()]
+  // 제목 단어는 가중치 +3.
+  for (const m of title.matchAll(/[가-힣]+/g)) add(normalizeKoreanToken(m[0]), 3);
+  for (const m of title.matchAll(/[A-Za-z][A-Za-z0-9_-]*/g)) add(normalizeLatinToken(m[0]), 3);
+  // 본문 단어: 빈도 가중치.
+  for (const m of text.matchAll(/[가-힣]+/g)) add(normalizeKoreanToken(m[0]), 1);
+  for (const m of text.matchAll(/[A-Za-z][A-Za-z0-9_-]*/g)) add(normalizeLatinToken(m[0]), 1);
+  // 점수 2 이상만 키워드로 (한 번만 나온 본문 단어는 제외 — 제목·해시태그는 이미 점수가 높다).
+  const ranked = [...found.entries()]
     .filter(([, n]) => n >= 2)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
+    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
     .map(([w]) => w);
+  // 더 긴 키워드에 포함되는 짧은 키워드는 빼준다 (예: "나이" ⊂ "나이테").
+  const out: string[] = [];
+  for (const w of ranked) {
+    if (out.some((kept) => kept.startsWith(w) && kept.length > w.length)) continue;
+    out.push(w);
+    if (out.length >= 10) break;
+  }
+  return out;
 }
 
 export function getOrCreateKeywordId(state: LocalState, name: string): string {
@@ -500,7 +620,7 @@ export type DriveMemoFile = {
   color?: string | null;
   pinned?: boolean;
   updatedAt?: string;
-  blocks?: Array<{ id?: string; type?: string; text?: string; checked?: boolean; dueDate?: string | null }>;
+  blocks?: Array<{ id?: string; type?: string; text?: string; checked?: boolean; dueDate?: string | null; parentId?: string | null }>;
 };
 
 /** Drive 파일 1개를 로컬 상태에 멱등으로 반영한다 (drive_file_id 기준). */
@@ -516,6 +636,7 @@ export function upsertMemoFromDrive(state: LocalState, file: DriveMemoFile, driv
     checked: b.checked ? 1 : 0,
     attachmentId: null,
     dueDate: b.dueDate ?? null,
+    parentId: b.parentId ?? null,
   }));
   if (existing) {
     existing.title = file.title ?? "";
@@ -552,6 +673,6 @@ export function memoToDriveFile(memo: MemoRecord): DriveMemoFile {
     updatedAt: memo.updatedAt,
     blocks: [...memo.blocks]
       .sort((a, b) => a.position - b.position)
-      .map((b) => ({ id: b.id, type: b.type, text: b.text, checked: b.checked === 1, dueDate: b.dueDate })),
+      .map((b) => ({ id: b.id, type: b.type, text: b.text, checked: b.checked === 1, dueDate: b.dueDate, parentId: b.parentId })),
   };
 }

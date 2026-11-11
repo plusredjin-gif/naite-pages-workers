@@ -1,13 +1,19 @@
 /**
  * 나이테 Pages-only — 랜딩 히어로 뷰 (로그인 전 첫 화면)
  *
- * 원본(memoaeb) 랜딩 기준: 헤드라인 '생각나는 순간, 바로 남기는 메모',
- * 주전자 drawing 캐릭터(이젤 앞에서 붓으로 로고 그리는 장면),
- * 시연용 예시 카드 3종, 하위 기능 10개 카드.
+ * 스페이스 원본(memoaeb) 히어로 그대로:
+ * - 모바일 상단 바: 햄버거(왼쪽) · 주전자 아바타(가운데) · "..."(오른쪽)
+ * - 가운데 정렬: 주황 소제목 "Google Drive 연동 메모" → 큰 제목 2줄
+ *   ("생각나는 순간," / "바로 남기는 메모" — "메모"가 따로 떨어지지 않음)
+ *   → 설명 문구 → 흰색 pill 로그인 버튼(Google G 로고) → 작은 안내 문구
+ * - 하단: 주전자 이젤 그림을 원본처럼 크게
+ * - 데스크톱은 원본대로 글 왼쪽·캐릭터 오른쪽 2단 배치.
  * 캐릭터 소개 블록은 만들지 않는다 (jin 결정).
  */
 
+import { useState } from "react";
 import { NaiteLogo, Teapot } from "../components/Logo";
+import { GoogleLoginButton } from "../components/GoogleLoginButton";
 import "./HeroView.css";
 
 const FEATURES = [
@@ -72,24 +78,95 @@ const EXAMPLE_CARDS = [
   },
 ] as const;
 
+/** 동그란 라인 아이콘 스타일(앱 전체 공통)의 햄버거·점 3개 아이콘. */
+function TopBarIcon(props: { kind: "menu" | "more" }) {
+  return (
+    <svg
+      width={22}
+      height={22}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      {props.kind === "menu" ? (
+        <>
+          <line x1="4" y1="7" x2="20" y2="7" />
+          <line x1="4" y1="12" x2="20" y2="12" />
+          <line x1="4" y1="17" x2="20" y2="17" />
+        </>
+      ) : (
+        <>
+          <circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none" />
+          <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+          <circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 export function HeroView(props: { onLogin: () => void }) {
   const { onLogin } = props;
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
     <div className="hero-view">
-      <section className="hero">
-        <div className="hero-text">
-          <NaiteLogo size={56} />
-          <h1>생각나는 순간, 바로 남기는 메모</h1>
-          <p>
-            흩어진 메모를 그냥 쌓아두지 마세요. 나이테는 메모에서 키워드를 뽑아내고,
-            키워드끼리 이어 지식의 나이테를 만듭니다. 메모는 Google Drive에 그대로
-            저장됩니다.
-          </p>
-          <div className="toolbar">
+      {/* 모바일 상단 바 (스페이스 원본 기준: 햄버거 · 아바타 · "..."). */}
+      <div className="hero-topbar">
+        <button
+          type="button"
+          className="hero-topbar-btn"
+          aria-label="메뉴"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((v) => !v)}
+        >
+          <TopBarIcon kind="menu" />
+        </button>
+        <span className="hero-topbar-avatar" aria-hidden="true">
+          <Teapot expression="wave" alt="" />
+        </span>
+        <button
+          type="button"
+          className="hero-topbar-btn"
+          aria-label="더 보기"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((v) => !v)}
+        >
+          <TopBarIcon kind="more" />
+        </button>
+        {menuOpen ? (
+          <nav className="hero-topbar-menu" aria-label="히어로 메뉴">
             <button type="button" onClick={onLogin}>
               Google로 로그인
             </button>
+            <a href="/privacy">개인정보처리방침</a>
+            <a href="#features" onClick={() => setMenuOpen(false)}>
+              기능 소개
+            </a>
+          </nav>
+        ) : null}
+      </div>
+
+      <section className="hero">
+        <div className="hero-text">
+          <NaiteLogo size={56} />
+          <p className="hero-eyebrow">Google Drive 연동 메모</p>
+          <h1>
+            <span className="hero-line">생각나는 순간,</span>
+            <span className="hero-line">바로 남기는 메모</span>
+          </h1>
+          <p className="hero-desc">
+            텍스트·사진·체크리스트·음성까지 한 메모에. 로그인하면 내 Google
+            Drive의 memo 폴더에 파일로 저장됩니다.
+          </p>
+          <div className="toolbar hero-login">
+            <GoogleLoginButton onClick={onLogin} label="Google 계정으로 로그인" />
           </div>
+          <p className="hero-note">
+            따로 회원가입 없이, 쓰던 Google 계정으로 바로 시작합니다.
+          </p>
         </div>
         <div className="hero-art">
           <Teapot expression="drawing" alt="이젤 앞에서 붓으로 로고를 그리는 주전자 캐릭터" />
@@ -107,7 +184,7 @@ export function HeroView(props: { onLogin: () => void }) {
         ))}
       </section>
 
-      <section className="feature-list" aria-label="나이테 기능">
+      <section className="feature-list" id="features" aria-label="나이테 기능">
         {FEATURES.map((f) => (
           <article key={f.title} className="feature-card">
             <h3>{f.title}</h3>

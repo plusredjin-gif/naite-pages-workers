@@ -58,6 +58,20 @@ export function savePickerApiKey(key: string): void {
   }
 }
 
+/** 설정 화면에서 저장한 API 키가 있는지. */
+export function hasSavedPickerApiKey(): boolean {
+  return readSavedApiKey() !== null;
+}
+
+/** 저장한 API 키를 지운다. */
+export function clearPickerApiKey(): void {
+  try {
+    localStorage.removeItem(SAVED_API_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 /** API 키가 빌드 시점에 들어갔는지 (설정 입력 없이 바로 쓸 수 있는지). */
 export function hasBuiltInPickerApiKey(): boolean {
   return Boolean(viteEnv("VITE_GOOGLE_API_KEY"));

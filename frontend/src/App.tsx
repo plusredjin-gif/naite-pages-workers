@@ -101,6 +101,10 @@ export function App(props: { auth: AuthProvider }) {
   const [fabHidden, setFabHidden] = useState(false);
   /** 첫 로그인 자동 가져오기는 세션당 한 번만. */
   const autoImportDone = useRef(false);
+  /** 자동 동기화로 새 메모가 들어오면 목록·격자 보기를 새로고침하는 신호. */
+  const [refreshTick, setRefreshTick] = useState(0);
+  /** 설정 변경 시 자동 동기화 타이머를 다시 시작하는 신호. */
+  const [settingsTick, setSettingsTick] = useState(0);
   /** 사이드바 필터 (원본: 보기·카테고리·키워드 섹션에서 고른 값). */
   const [memoFilter, setMemoFilter] = useState<MemoFilter>({ kind: "all" });
   /** 제목 줄의 기간·정렬 (원본: 제목 줄 오른쪽). 격자·목록 보기가 공유한다. */
@@ -174,6 +178,51 @@ export function App(props: { auth: AuthProvider }) {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // 설정 변경 알림: 자동 동기화 타이머를 다시 시작한다.
+  useEffect(() => {
+    const onChange = () => setSettingsTick((t) => t + 1);
+    window.addEventListener("naite:settings-changed", onChange);
+    return () => window.removeEventListener("naite:settings-changed", onChange);
+  }, []);
+
+  // 자동 동기화: 앱이 열려 있는 동안 주기적으로 Drive에서 바뀐 메모를 가져온다.
+  // 설정(auto_sync_enabled, 기본 켬 · auto_sync_interval_min, 기본 5분)은 매번
+  // 읽어서 설정 화면에서 바꾼 값이 바로 반영되게 한다. 탭이 안 보이면 건너뛴다.
+  // 토큰 만료·네트워크 오류는 조용히 넘어간다 (알림 스팸 방지).
+  // 앱을 닫으면 동작하지 않는다 — Pages-only에는 백그라운드 동기화가 없다.
+  useEffect(() => {
+    if (!session) return;
+    let stopped = false;
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const tick = async () => {
+      if (stopped || document.visibilityState !== "visible") return;
+      try {
+        const settings = await api.settings.get();
+        if (settings.settings["auto_sync_enabled"] === "0") return;
+        const result = await api.drive.autoSync();
+        if ((result.imported ?? 0) > 0) {
+          setNotice(`자동 동기화: Drive에서 ${result.imported}개 메모를 가져왔습니다.`);
+          setRefreshTick((t) => t + 1);
+          void loadSidebar();
+        }
+      } catch (e) {
+        // 토큰이 만료됐으면 다음 틱도 실패하니 조용히 멈춘다 (수동 동기화·다시 로그인이 안내한다).
+        if ((e as { code?: string }).code === "TOKEN_EXPIRED_RELOGIN_REQUIRED") stopped = true;
+      }
+    };
+    const start = async () => {
+      const settings = await api.settings.get().catch(() => ({ settings: {} as Record<string, string> }));
+      if (settings.settings["auto_sync_enabled"] === "0") return;
+      const minutes = Number(settings.settings["auto_sync_interval_min"] ?? "5") || 5;
+      timer = setInterval(() => void tick(), Math.max(1, minutes) * 60 * 1000);
+    };
+    void start();
+    return () => {
+      stopped = true;
+      if (timer) clearInterval(timer);
+    };
+  }, [session, settingsTick]);
 
   // 첫 로그인 시: 로컬 메모가 비어 있으면 Drive memo 폴더에서 자동 가져오기.
   // drive.file 범위라 이 앱이 만든 파일만 보인다. 원본 memoaeb 메모는
@@ -580,6 +629,8 @@ export function App(props: { auth: AuthProvider }) {
               filter={memoFilter}
               period={period}
               sort={sort}
+              refreshTick={refreshTick}
+              onNew={() => void handleNewMemo()}
             />
           ) : view.name === "list" ? (
             <MemoListView
@@ -591,6 +642,8 @@ export function App(props: { auth: AuthProvider }) {
               filter={memoFilter}
               period={period}
               sort={sort}
+              refreshTick={refreshTick}
+              onNew={() => void handleNewMemo()}
             />
           ) : view.name === "outline" ? (
             <OutlineView onOpen={openMemo} setNotice={setNotice} />
