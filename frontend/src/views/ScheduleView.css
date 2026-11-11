@@ -94,10 +94,22 @@
   margin-bottom: 8px;
 }
 
+/* 할일 완료 표시 (원본: 동그란 체크 — 완료면 주황 채움 + 흰 체크, 미완료면 빈 원). */
 .task-check {
-  font-size: 16px;
-  line-height: 1;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--naite-border-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  color: var(--naite-on-orange);
+}
+
+.task-check.done {
+  background: var(--naite-orange);
+  border-color: var(--naite-orange);
 }
 
 .task-title {

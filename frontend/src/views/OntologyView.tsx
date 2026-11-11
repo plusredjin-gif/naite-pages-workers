@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, type OntologyGraph } from "../api";
 import { Teapot } from "../components/Logo";
+import { LineIcon } from "../components/LineIcon";
 import "./OntologyView.css";
 
 type NodeKind = "keyword" | "person" | "place" | "location";
@@ -407,9 +408,17 @@ export function OntologyView(props: {
                   strokeDasharray={dashed ? "5 3" : undefined}
                 />
                 {e.locked === 1 ? (
-                  <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - 4} fontSize={11} textAnchor="middle">
-                    🔒
-                  </text>
+                  <g
+                    transform={`translate(${(x1 + x2) / 2 - 6} ${(y1 + y2) / 2 - 10}) scale(0.5)`}
+                    fill="none"
+                    stroke="#8a7a5a"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </g>
                 ) : null}
               </g>
             );
@@ -445,7 +454,7 @@ export function OntologyView(props: {
         </svg>
       </div>
       <p className="meta">
-        실선은 신장 포리스트(상위 관계) 간선, 점선은 나머지 상위·관련 간선입니다. 🔒는 잠긴 간선입니다.
+        실선은 신장 포리스트(상위 관계) 간선, 점선은 나머지 상위·관련 간선입니다. <LineIcon name="lock" size={13} />는 잠긴 간선입니다.
         노드를 누르면 아래에 연결된 메모가 나옵니다.
       </p>
 
@@ -747,7 +756,7 @@ function KeywordManageCard(props: {
                   }
                   aria-label={`${nameOf(e.parentId)} 상위 잠금 토글`}
                 >
-                  {e.locked === 1 ? "🔒" : "🔓"}
+                  {e.locked === 1 ? <LineIcon name="lock" size={13} /> : <LineIcon name="unlock" size={13} />}
                 </button>
                 <button
                   onClick={() =>
@@ -757,7 +766,7 @@ function KeywordManageCard(props: {
                   }
                   aria-label={`${nameOf(e.parentId)} 상위 빼기`}
                 >
-                  ✕
+                  <LineIcon name="x" size={12} />
                 </button>
               </span>
             ))}
@@ -800,7 +809,7 @@ function KeywordManageCard(props: {
                   }
                   aria-label={`${nameOf(e.relatedId)} 관련 잠금 토글`}
                 >
-                  {e.locked === 1 ? "🔒" : "🔓"}
+                  {e.locked === 1 ? <LineIcon name="lock" size={13} /> : <LineIcon name="unlock" size={13} />}
                 </button>
                 <button
                   onClick={() =>
@@ -810,7 +819,7 @@ function KeywordManageCard(props: {
                   }
                   aria-label={`${nameOf(e.relatedId)} 관련 빼기`}
                 >
-                  ✕
+                  <LineIcon name="x" size={12} />
                 </button>
               </span>
             ))}
@@ -838,7 +847,7 @@ function KeywordManageCard(props: {
             </button>
           </div>
           <p className="meta">
-            <span className="lock-mark">🔒</span> 잠긴 간선은 AI 가져오기가 건드리지 않습니다. 자물쇠를 눌러 잠그거나 풀 수
+            <span className="lock-mark"><LineIcon name="lock" size={13} /></span> 잠긴 간선은 AI 가져오기가 건드리지 않습니다. 자물쇠를 눌러 잠그거나 풀 수
             있습니다.
           </p>
         </div>

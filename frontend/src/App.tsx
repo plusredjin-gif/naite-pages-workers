@@ -322,6 +322,13 @@ export function App(props: { auth: AuthProvider }) {
     goMain("grid");
   }
 
+  /** 로고 홈: 전체 메모(격자) 홈으로 이동한다. 헤더·드로어 로고 클릭용. */
+  function goHome() {
+    setMemoFilter({ kind: "all" });
+    setSearch("");
+    goMain("grid");
+  }
+
   /** 왼쪽 메뉴 키워드: 온톨로지 화면의 키워드 관리 카드로 이동한다. */
   function goKeywords() {
     goMain("ontology");
@@ -501,7 +508,7 @@ export function App(props: { auth: AuthProvider }) {
       ) : null}
       <div className="app-shell">
         <aside className={drawerOpen ? "sidebar drawer-open" : "sidebar"}>
-          <NaiteLogo size={36} />
+          <NaiteLogo size={36} onClick={() => goHome()} />
           <button type="button" className="new-memo-btn" onClick={() => void handleNewMemo()}>
             + 새 메모
           </button>
@@ -650,16 +657,19 @@ export function App(props: { auth: AuthProvider }) {
 
         <div className="app-main">
           {/* 모바일 상단 full-width "+ 새 메모" 버튼 (데스크톱에서는 안 보인다).
+              편집기에서는 안 보인다 — 원본 편집기에는 없는 버튼.
               모바일 FAB은 가림 문제로 빼기로 한 결정 그대로 — 이 버튼이 대신한다. */}
-          <button
-            type="button"
-            className="mobile-new-memo"
-            onClick={() => void handleNewMemo()}
-          >
-            + 새 메모
-          </button>
+          {view.name !== "editor" ? (
+            <button
+              type="button"
+              className="mobile-new-memo"
+              onClick={() => void handleNewMemo()}
+            >
+              + 새 메모
+            </button>
+          ) : null}
           <header className="header">
-            <NaiteLogo size={36} />
+            <NaiteLogo size={36} onClick={() => goHome()} />
             <input
               className="header-search"
               type="search"
@@ -717,6 +727,7 @@ export function App(props: { auth: AuthProvider }) {
                     type="button"
                     role="tab"
                     aria-selected={currentMain === item.key}
+                    aria-label={item.label}
                     className={currentMain === item.key ? "active" : ""}
                     onClick={() => goMain(item.key)}
                   >

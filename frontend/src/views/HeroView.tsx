@@ -151,7 +151,11 @@ export function HeroView(props: { onLogin: () => void }) {
 
       <section className="hero">
         <div className="hero-text">
-          <NaiteLogo size={56} />
+          <NaiteLogo
+            size={56}
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            label="맨 위로"
+          />
           <p className="hero-eyebrow">Google Drive 연동 메모</p>
           <h1>
             <span className="hero-line">생각나는 순간,</span>

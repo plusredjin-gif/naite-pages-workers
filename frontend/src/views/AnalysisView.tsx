@@ -490,7 +490,7 @@ export function AnalysisView(props: {
       <div className="card">
         <h3>AI 결과로 관계 다시 만들기</h3>
         <p className="meta">
-          위 프롬프트를 AI에 붙여넣고 받은 JSON을 아래에 붙여넣으세요. 미리보기에서 바뀔 내용을 확인한 뒤 적용합니다. 🔒
+          위 프롬프트를 AI에 붙여넣고 받은 JSON을 아래에 붙여넣으세요. 미리보기에서 바뀔 내용을 확인한 뒤 적용합니다.
           잠긴 관계는 건드리지 않습니다.
         </p>
         <textarea

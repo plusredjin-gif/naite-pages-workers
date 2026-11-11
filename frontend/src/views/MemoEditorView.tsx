@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, TOKEN_EXPIRED_CODE, type Block, type Category, type MemoDetail } from "../api";
-import { LineIcon } from "../components/LineIcon";
+import { LineIcon, RoundIcon } from "../components/LineIcon";
 
 /** 카드 색상 7종 (원본). */
 const CARD_COLORS = [
@@ -746,13 +746,13 @@ export function MemoEditorView(props: {
           <div key={block.id} className="block">
             <div className="block-controls">
               <button type="button" aria-label="위로" onClick={() => void handleMoveBlock(block, -1)}>
-                ↑
+                <LineIcon name="chevronUp" size={14} />
               </button>
               <button type="button" aria-label="아래로" onClick={() => void handleMoveBlock(block, 1)}>
-                ↓
+                <LineIcon name="chevronDown" size={14} />
               </button>
               <button type="button" aria-label="삭제" onClick={() => void handleRemoveBlock(block)}>
-                ✕
+                <LineIcon name="x" size={14} />
               </button>
             </div>
             {block.type === "todo" ? (
@@ -780,7 +780,10 @@ export function MemoEditorView(props: {
                     title="Google Tasks와 동기화 (하위 할일 포함)"
                     onClick={() => void handleTaskSync(block)}
                   >
-                    ↻ Tasks
+                    <span className="inline-icon">
+                      <LineIcon name="refresh" size={13} />
+                    </span>{" "}
+                    Tasks
                   </button>
                 </div>
                 {/* 하위 할일 (원본: 체크리스트 하위 할일 — Google Tasks subtask로 동기화) */}
@@ -811,14 +814,16 @@ export function MemoEditorView(props: {
                           title="Google Tasks와 동기화"
                           onClick={() => void handleTaskSync(sub)}
                         >
-                          ↻
+                          <span className="inline-icon">
+                            <LineIcon name="refresh" size={13} />
+                          </span>
                         </button>
                         <button
                           type="button"
                           aria-label="하위 할일 삭제"
                           onClick={() => void handleRemoveBlock(sub)}
                         >
-                          ✕
+                          <LineIcon name="x" size={13} />
                         </button>
                       </div>
                     ))}
@@ -883,42 +888,34 @@ export function MemoEditorView(props: {
           })}
       </div>
 
-      {/* 하단 아이콘 도구 모음 (원본: 단락·체크리스트·사진·음성메모·일정) */}
+      {/* 하단 아이콘 도구 모음 (원본: 단락·체크리스트·사진·음성메모·일정 — 동그란 라인 아이콘.
+          보기 전환 pill과 같은 규칙: 데스크톱 아이콘+단어, 모바일 아이콘만). */}
       <div className="toolbar editor-toolbar" role="toolbar" aria-label="블록 추가">
-        <button type="button" onClick={() => void handleAddBlock("paragraph")} title="단락 추가">
-          <span className="inline-icon">
-            <LineIcon name="type" size={15} />
-          </span>{" "}
-          단락
+        <button type="button" onClick={() => void handleAddBlock("paragraph")} title="단락 추가" aria-label="단락 추가">
+          <RoundIcon name="type" />
+          <span className="pill-label">단락</span>
         </button>
-        <button type="button" onClick={() => void handleAddBlock("todo")} title="체크리스트 추가">
-          <span className="inline-icon">
-            <LineIcon name="check" size={15} />
-          </span>{" "}
-          체크리스트
+        <button type="button" onClick={() => void handleAddBlock("todo")} title="체크리스트 추가" aria-label="체크리스트 추가">
+          <RoundIcon name="check" />
+          <span className="pill-label">체크리스트</span>
         </button>
         <button
           type="button"
           onClick={() => photoInputRef.current?.click()}
           disabled={uploading}
           title="사진 첨부"
+          aria-label="사진 첨부"
         >
-          <span className="inline-icon">
-            <LineIcon name="image" size={15} />
-          </span>{" "}
-          사진
+          <RoundIcon name="image" />
+          <span className="pill-label">사진</span>
         </button>
-        <button type="button" onClick={() => setVoiceOpen((v) => !v)} title="음성메모">
-          <span className="inline-icon">
-            <LineIcon name="mic" size={15} />
-          </span>{" "}
-          음성메모
+        <button type="button" onClick={() => setVoiceOpen((v) => !v)} title="음성메모" aria-label="음성메모">
+          <RoundIcon name="mic" />
+          <span className="pill-label">음성메모</span>
         </button>
-        <button type="button" onClick={() => setScheduleOpen((v) => !v)} title="일정 추가">
-          <span className="inline-icon">
-            <LineIcon name="calendar" size={15} />
-          </span>{" "}
-          일정
+        <button type="button" onClick={() => setScheduleOpen((v) => !v)} title="일정 추가" aria-label="일정 추가">
+          <RoundIcon name="calendar" />
+          <span className="pill-label">일정</span>
         </button>
         <input
           ref={photoInputRef}
@@ -938,10 +935,27 @@ export function MemoEditorView(props: {
           <h3>음성메모</h3>
           <div className="toolbar">
             <button type="button" onClick={() => void handleRecordToggle()} disabled={uploading}>
-              {recording ? "⏹ 녹음 중지" : "● 녹음 시작"}
+              {recording ? (
+                <>
+                  <span className="inline-icon">
+                    <LineIcon name="stop" size={14} />
+                  </span>{" "}
+                  녹음 중지
+                </>
+              ) : (
+                <>
+                  <span className="inline-icon">
+                    <LineIcon name="mic" size={14} />
+                  </span>{" "}
+                  녹음 시작
+                </>
+              )}
             </button>
             <button type="button" onClick={() => handleSpeechToggle()}>
-              {listening ? "음성 인식 중지" : "🎤 말해서 단락 추가"}
+              <span className="inline-icon">
+                <LineIcon name="mic" size={14} />
+              </span>{" "}
+              {listening ? "음성 인식 중지" : "말해서 단락 추가"}
             </button>
           </div>
           <p className="meta">
@@ -1029,7 +1043,7 @@ export function MemoEditorView(props: {
             <span key={k.id} className="chip">
               {k.name}{" "}
               <button type="button" aria-label={`${k.name} 삭제`} onClick={() => void handleRemoveKeyword(k.id)}>
-                ✕
+                <LineIcon name="x" size={12} />
               </button>
             </span>
           ))}
@@ -1060,7 +1074,7 @@ export function MemoEditorView(props: {
               </span>{" "}
               {p.name}{" "}
               <button type="button" aria-label={`${p.name} 연결 해제`} onClick={() => void handleUnlinkPerson(p.id)}>
-                ✕
+                <LineIcon name="x" size={12} />
               </button>
             </span>
           ))}
@@ -1099,7 +1113,7 @@ export function MemoEditorView(props: {
               </span>{" "}
               {p.name}{" "}
               <button type="button" aria-label={`${p.name} 연결 해제`} onClick={() => void handleUnlinkPlace(p.id)}>
-                ✕
+                <LineIcon name="x" size={12} />
               </button>
             </span>
           ))}
@@ -1137,7 +1151,10 @@ export function MemoEditorView(props: {
           <div className="chip-row">
             {memo.locations.map((l) => (
               <span key={l.id} className="chip">
-                ◎ {l.name}
+                <span className="inline-icon">
+                  <LineIcon name="mapPin" size={13} />
+                </span>{" "}
+                {l.name}
               </span>
             ))}
             <button type="button" onClick={() => void handleClearGeo()}>

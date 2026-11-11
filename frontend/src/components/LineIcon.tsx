@@ -43,7 +43,14 @@ export type LineIconName =
   | "type"
   | "image"
   | "mic"
-  | "tag";
+  | "tag"
+  | "chevronUp"
+  | "chevronDown"
+  | "x"
+  | "refresh"
+  | "stop"
+  | "lock"
+  | "unlock";
 
 const PATHS: Record<LineIconName, JSX.Element> = {
   grid: (
@@ -260,6 +267,35 @@ const PATHS: Record<LineIconName, JSX.Element> = {
     <>
       <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" />
       <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />
+    </>
+  ),
+  chevronUp: <polyline points="18 15 12 9 6 15" />,
+  chevronDown: <polyline points="6 9 12 15 18 9" />,
+  x: (
+    <>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </>
+  ),
+  refresh: (
+    <>
+      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+      <path d="M8 16H3v5" />
+    </>
+  ),
+  stop: <rect x="6" y="6" width="12" height="12" rx="1.5" />,
+  lock: (
+    <>
+      <rect x="3" y="11" width="18" height="11" rx="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </>
+  ),
+  unlock: (
+    <>
+      <rect x="3" y="11" width="18" height="11" rx="2" />
+      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
     </>
   ),
 };

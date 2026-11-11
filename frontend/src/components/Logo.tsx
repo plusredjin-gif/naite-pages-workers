@@ -6,12 +6,20 @@
  * 한글 '나이테' 텍스트(테만 주황 #e8590c).
  */
 
-/** 원본 로고 이미지. 가로가 긴 락업이라 높이를 기준으로 쓴다. */
-export function NaiteLogo(props: { height?: number; size?: number; withKorean?: boolean; className?: string }) {
-  const { height, size, withKorean = true, className } = props;
+/** 원본 로고 이미지. 가로가 긴 락업이라 높이를 기준으로 쓴다.
+ *  onClick을 주면 로고가 홈으로 가는 버튼이 된다 (헤더·드로어·히어로). */
+export function NaiteLogo(props: {
+  height?: number;
+  size?: number;
+  withKorean?: boolean;
+  className?: string;
+  onClick?: () => void;
+  label?: string;
+}) {
+  const { height, size, withKorean = true, className, onClick, label } = props;
   const h = height ?? size ?? 40;
-  return (
-    <span className={className ?? "naite-logo"}>
+  const inner = (
+    <>
       <img
         src="/assets/naite-logo.png"
         alt="naite 로고"
@@ -22,8 +30,22 @@ export function NaiteLogo(props: { height?: number; size?: number; withKorean?: 
           나이<span className="naite-ko-accent">테</span>
         </span>
       ) : null}
-    </span>
+    </>
   );
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className={className ?? "logo-btn"}
+        onClick={onClick}
+        aria-label={label ?? "홈으로 (메모 목록)"}
+        title="홈으로 (메모 목록)"
+      >
+        <span className="naite-logo">{inner}</span>
+      </button>
+    );
+  }
+  return <span className={className ?? "naite-logo"}>{inner}</span>;
 }
 
 /** 작은 자리(파비콘 대용·칩 등)용 심플 SVG 마크. 원본 동심원 결을 간략히 재현. */

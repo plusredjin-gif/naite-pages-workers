@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { api } from "../api";
 import { Teapot } from "../components/Logo";
+import { LineIcon } from "../components/LineIcon";
 import "./ScheduleView.css";
 
 const TOKEN_EXPIRED_CODE = "TOKEN_EXPIRED_RELOGIN_REQUIRED";
@@ -426,8 +427,11 @@ export function ScheduleView(props: {
               {taskTree.top.map((t) => (
                 <li key={t.googleTaskId || t.title}>
                   <div className={t.completed ? "task-item task-done" : "task-item"}>
-                    <span className="task-check" aria-label={t.completed ? "완료" : "미완료"}>
-                      {t.completed ? "✓" : "○"}
+                    <span
+                      className={t.completed ? "task-check done" : "task-check"}
+                      aria-label={t.completed ? "완료" : "미완료"}
+                    >
+                      {t.completed ? <LineIcon name="check" size={13} /> : null}
                     </span>
                     <span className="task-title">{t.title || "(제목 없음)"}</span>
                     {t.due ? <span className="meta">마감 {formatDue(t.due)}</span> : null}
@@ -438,8 +442,11 @@ export function ScheduleView(props: {
                       key={child.googleTaskId || child.title}
                       className={child.completed ? "task-item task-done task-sub" : "task-item task-sub"}
                     >
-                      <span className="task-check" aria-label={child.completed ? "완료" : "미완료"}>
-                        {child.completed ? "✓" : "○"}
+                      <span
+                        className={child.completed ? "task-check done" : "task-check"}
+                        aria-label={child.completed ? "완료" : "미완료"}
+                      >
+                        {child.completed ? <LineIcon name="check" size={13} /> : null}
                       </span>
                       <span className="task-title">└ {child.title || "(제목 없음)"}</span>
                       {child.due ? <span className="meta">마감 {formatDue(child.due)}</span> : null}
