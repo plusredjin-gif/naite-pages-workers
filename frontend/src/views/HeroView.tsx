@@ -124,9 +124,14 @@ export function HeroView(props: { onLogin: () => void }) {
         >
           <TopBarIcon kind="menu" />
         </button>
-        <span className="hero-topbar-avatar" aria-hidden="true">
-          <Teapot expression="wave" alt="" />
-        </span>
+        {/* 2026-11-12 jin 지시: 모바일 상단 바 가운데 주전자 아바타 → 나이테 로고로 교체.
+            아래 히어로 로고는 주전자 캐릭터로 바꿨다. */}
+        <NaiteLogo
+          size={30}
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          label="맨 위로"
+          className="logo-btn hero-topbar-logo"
+        />
         <button
           type="button"
           className="hero-topbar-btn"
@@ -151,11 +156,18 @@ export function HeroView(props: { onLogin: () => void }) {
 
       <section className="hero">
         <div className="hero-text">
+          {/* 2026-11-12 jin 지시: 모바일에서만 히어로 로고 → 주전자 캐릭터로 교체
+              (상단 바 가운데는 나이테 로고로). 데스크톱은 로고 그대로 — 두 요소를
+              함께 두고 CSS로 전환한다. */}
           <NaiteLogo
             size={56}
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             label="맨 위로"
+            className="logo-btn hero-logo"
           />
+          <span className="hero-character" aria-hidden="true">
+            <Teapot expression="wave" alt="" />
+          </span>
           <p className="hero-eyebrow">Google Drive 연동 메모</p>
           <h1>
             <span className="hero-line">생각나는 순간,</span>

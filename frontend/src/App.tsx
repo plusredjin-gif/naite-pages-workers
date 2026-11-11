@@ -453,8 +453,8 @@ export function App(props: { auth: AuthProvider }) {
 
   return (
     <main className="app app-shell-wrap">
-      {/* 모바일 상단 바 (스페이스 원본 기준: 햄버거 · 주전자 아바타 · "...").
-          데스크톱에서는 안 보인다. */}
+      {/* 모바일 상단 바 (2026-11-12 jin 지시: 가운데 주전자 아바타 → 나이테 로고로 교체.
+          아래 헤더의 로고는 주전자 캐릭터로 바꿨다. 데스크톱에서는 안 보인다. */}
       <div className="app-topbar">
         <button
           type="button"
@@ -468,9 +468,7 @@ export function App(props: { auth: AuthProvider }) {
         >
           <TopBarIcon kind="menu" />
         </button>
-        <span className="app-topbar-avatar" aria-hidden="true">
-          <Teapot expression="wave" alt="" />
-        </span>
+        <NaiteLogo size={30} onClick={() => goHome()} className="logo-btn app-topbar-logo" />
         <button
           type="button"
           className="app-topbar-btn"
@@ -669,7 +667,19 @@ export function App(props: { auth: AuthProvider }) {
             </button>
           ) : null}
           <header className="header">
-            <NaiteLogo size={36} onClick={() => goHome()} />
+            {/* 2026-11-12 jin 지시: 모바일에서는 헤더 로고 → 주전자 캐릭터로 교체.
+                데스크톱은 로고 그대로 — 두 요소를 함께 두고 CSS로 전환한다.
+                캐릭터를 눌러도 로고 자리와 같이 홈으로 간다. */}
+            <NaiteLogo size={36} onClick={() => goHome()} className="logo-btn header-logo" />
+            <button
+              type="button"
+              className="header-teapot"
+              onClick={() => goHome()}
+              aria-label="홈으로 (메모 목록)"
+              title="홈으로 (메모 목록)"
+            >
+              <Teapot expression="wave" alt="주전자 캐릭터" />
+            </button>
             <input
               className="header-search"
               type="search"

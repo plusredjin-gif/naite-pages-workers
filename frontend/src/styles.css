@@ -1229,6 +1229,11 @@ button:disabled {
   display: none;
 }
 
+/* 헤더 주전자 캐릭터는 모바일에서만 보인다 (데스크톱은 로고 그대로). */
+.header-teapot {
+  display: none;
+}
+
 .mobile-new-memo {
   display: none;
 }
@@ -1242,7 +1247,9 @@ button:disabled {
     flex-direction: column;
   }
 
-  /* 모바일 상단 바 (히어로 상단 바와 같은 모양·크기). */
+  /* 모바일 상단 바 (히어로 상단 바와 같은 모양·크기).
+     2026-11-12 jin 지시: 가운데 주전자 아바타 → 나이테 로고로 교체
+     (로고 누르면 홈으로). 데스크톱에서는 상단 바 자체가 안 보인다. */
   .app-topbar {
     position: relative;
     display: flex;
@@ -1264,16 +1271,32 @@ button:disabled {
     padding: 0;
   }
 
-  .app-topbar-avatar {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    overflow: hidden;
-    display: inline-block;
-    background: var(--naite-warm-3);
+  .app-topbar-logo {
+    flex-shrink: 0;
   }
 
-  .app-topbar-avatar img {
+  /* 모바일 헤더: 로고 → 주전자 캐릭터로 교체 (데스크톱은 로고 그대로).
+     두 요소를 함께 두고 CSS로만 전환한다. */
+  .header .header-logo {
+    display: none;
+  }
+
+  .header-teapot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--naite-border);
+    background: var(--naite-warm-3);
+    overflow: hidden;
+    padding: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .header-teapot img {
     width: 100%;
     height: 100%;
     object-fit: cover;

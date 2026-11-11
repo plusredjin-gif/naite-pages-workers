@@ -412,3 +412,14 @@ naite-pages-workers/
   - mock 전용 안내 ("Drive 권한이 없어 다시 로그인" 노란 배너 2개)는 mock에 실제 토큰이 없어서 뜨는 것이고 실계정에서는 안 뜬다.
 - 검증 스크립트: `~/workspace/naite-verification-demo/tool/cap-all360.mjs`, `cap-all360b.mjs`, `cap-pills.mjs`, `cap-subtask.mjs`. mock 서버(8901)·프로덕션 로컬 서버(8902)는 검증 후 정리함.
 - GitHub 푸시는 안 함 (지시대로 매니페스트만 갱신). 변경 파일 23개 — `~/workspace/naite-push-paths.txt` 참조.
+
+## 22. 모바일 로고·캐릭터 교체 + OAuth 심사 준비 점검 (2026-11-12)
+- jin 지시: 모바일 상단 바 가운데 주전자 캐릭터 → 나이테 로고, 아래 헤더 로고 → 주전자 캐릭터로 서로 교체. 데스크톱은 그대로.
+- 적용: 앱 상단 바(`App.tsx` `.app-topbar-logo`, 로고 누르면 홈으로) + 헤더(`.header-teapot`, 캐릭터 누르면 홈으로) + 히어로 상단 바(`HeroView.tsx` `.hero-topbar-logo`)와 히어로 로고 자리(`.hero-character`). 로고/캐릭터 두 요소를 함께 두고 CSS(`@media max-width: 768px`)로만 전환 — 데스크톱은 로고 그대로.
+- 검증: 라이브 히어로 360px 캡처 확인(상단 바 로고·아래 동그란 캐릭터) + mock 로그인 상태 메인 360px 캡처 확인(상단 바 로고·헤더 캐릭터·클릭 시 "전체 메모" 홈 이동) + 데스크톱 1240px 확인(헤더 로고 보임·캐릭터·상단 바 숨김). 스크립트 `~/workspace/naite-verification-demo/tool/cap-swap360.mjs`, `cap-swap-mock.mjs`.
+- OAuth 심사 준비 상태 (2026-11-12 점검):
+  - 준비됨: 로그인 요청 범위 최소 7개만(`drive.file`·`calendar.events`·`tasks`·`contacts.readonly`·`openid`·`email`·`profile`) — 라이브 번들 `index-B2X27ULN.js`에서 확인. 전체 `drive`/`calendar` 범위는 요청하지 않음. 단, `App.tsx`에 기존 전체 범위 토큰을 받아주는 검사 코드(`scopes.includes(".../auth/drive")`)가 남아 있음 — 요청이 아니라 검사라 심사에는 영향 없지만, 콘솔의 동의 화면 범위 목록에 전체 범위가 남아 있으면 제거해야 함.
+  - 준비됨: 개인정보처리방침 https://naite.plustree.net/privacy 로그인 없이 열림(한국어 전문+영문 요약, 문의 plustree@googlegroups.com), 홈페이지 https://naite.plustree.net 200.
+  - 준비됨: 데모 영상 `~/workspace/your_files/naite-verification-demo/naite-demo-video.mp4` 2분 14초·7.7MB·13장면. 단, Google 동의 화면 장면이 없음 — jin이 실계정으로 로그인→동의 화면을 찍어 앞부분에 붙여야 함.
+  - 준비됨: `docs/VERIFICATION.md` (권한별 영문 사용 이유·데모 대본·제출 체크리스트).
+  - jin이 콘솔에서 직접 해야 할 일: ① 동의 화면 입력(앱 이름 나이테·지원 이메일·개발자 연락처·로고·홈페이지·개인정보처리방침 URL) ② 범위 확인(위 7개만, 전체 범위 있으면 제거) ③ 테스트 사용자에 plusredjin@gmail.com 확인 ④ OAuth 클라이언트 원본·리디렉션 URI 3개씩 확인 ⑤ API 키 만들기(리퍼러 제한 3개 도메인) 후 설정 화면에 저장 ⑥ 데모 영상 동의 화면 장면 재촬영 ⑦ "확인 요청 제출" 클릭.
