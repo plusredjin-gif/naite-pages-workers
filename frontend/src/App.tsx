@@ -17,7 +17,7 @@ import { api, configureApiTokenProvider, type Category } from "./api";
 import { type AuthProvider, type Session, isGoogleClientConfigured } from "./auth-seam";
 import { loadAccessToken } from "./token-store";
 import { LoginGuide, PlusTreeFooter } from "./LoginGuide";
-import { NaiteLogo } from "./components/Logo";
+import { NaiteLogo, Teapot } from "./components/Logo";
 import { RoundIcon, categoryIconFor, type LineIconName } from "./components/LineIcon";
 import { HeroView } from "./views/HeroView";
 import { MemoListView } from "./views/MemoListView";
@@ -82,6 +82,37 @@ type SidebarData = {
   total: number;
 };
 
+/** 동그란 라인 아이콘 스타일(앱 전체 공통)의 햄버거·점 3개 아이콘
+ *  (히어로 상단 바와 같은 모양 — 모바일 메인 상단 바용). */
+function TopBarIcon(props: { kind: "menu" | "more" }) {
+  return (
+    <svg
+      width={22}
+      height={22}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      {props.kind === "menu" ? (
+        <>
+          <line x1="4" y1="7" x2="20" y2="7" />
+          <line x1="4" y1="12" x2="20" y2="12" />
+          <line x1="4" y1="17" x2="20" y2="17" />
+        </>
+      ) : (
+        <>
+          <circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none" />
+          <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+          <circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 export function App(props: { auth: AuthProvider }) {
   const { auth } = props;
   const [session, setSession] = useState<Session | null>(null);
@@ -99,6 +130,11 @@ export function App(props: { auth: AuthProvider }) {
   /** 모바일 새 메모 FAB: 아래로 스크롤하면 숨기고 위로 올리면 다시 보인다
    *  (카드 날짜·Drive 저장 표시를 가리지 않게). */
   const [fabHidden, setFabHidden] = useState(false);
+  /** 모바일 사이드바 드로어 (스페이스 원본: 햄버거로 여는 드로어, 기본 숨김).
+   *  데스크톱에서는 사이드바가 항상 보인다. */
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  /** 모바일 상단 바 "..." 메뉴 (가져오기·설정·로그아웃·개인정보처리방침). */
+  const [moreOpen, setMoreOpen] = useState(false);
   /** 첫 로그인 자동 가져오기는 세션당 한 번만. */
   const autoImportDone = useRef(false);
   /** 자동 동기화로 새 메모가 들어오면 목록·격자 보기를 새로고침하는 신호. */
@@ -276,6 +312,8 @@ export function App(props: { auth: AuthProvider }) {
   function goMain(name: MainView) {
     setLastMain(name);
     setView({ name });
+    setDrawerOpen(false);
+    setMoreOpen(false);
   }
 
   /** 사이드바 필터 선택: 메모 보기(격자)로 이동해 해당 필터로 보여준다. */
@@ -334,9 +372,13 @@ export function App(props: { auth: AuthProvider }) {
     setSession(null);
     setView({ name: "grid" });
     setShowConsent(false);
+    setDrawerOpen(false);
+    setMoreOpen(false);
   }
 
   async function handleNewMemo() {
+    setDrawerOpen(false);
+    setMoreOpen(false);
     try {
       const { id } = await api.memos.create({ title: "" });
       openMemo(id);
@@ -347,6 +389,8 @@ export function App(props: { auth: AuthProvider }) {
 
   async function handleDriveImport() {
     setNotice(null);
+    setDrawerOpen(false);
+    setMoreOpen(false);
     try {
       const result = await api.drive.importAll(false);
       setNotice(`Drive에서 ${result.imported ?? 0}개 메모를 가져왔습니다. (전체 ${result.total ?? 0}개)`);
@@ -402,8 +446,61 @@ export function App(props: { auth: AuthProvider }) {
 
   return (
     <main className="app app-shell-wrap">
+      {/* 모바일 상단 바 (스페이스 원본 기준: 햄버거 · 주전자 아바타 · "...").
+          데스크톱에서는 안 보인다. */}
+      <div className="app-topbar">
+        <button
+          type="button"
+          className="app-topbar-btn"
+          aria-label="메뉴"
+          aria-expanded={drawerOpen}
+          onClick={() => {
+            setDrawerOpen((v) => !v);
+            setMoreOpen(false);
+          }}
+        >
+          <TopBarIcon kind="menu" />
+        </button>
+        <span className="app-topbar-avatar" aria-hidden="true">
+          <Teapot expression="wave" alt="" />
+        </span>
+        <button
+          type="button"
+          className="app-topbar-btn"
+          aria-label="더 보기"
+          aria-expanded={moreOpen}
+          onClick={() => {
+            setMoreOpen((v) => !v);
+            setDrawerOpen(false);
+          }}
+        >
+          <TopBarIcon kind="more" />
+        </button>
+        {moreOpen ? (
+          <nav className="app-topbar-menu" aria-label="더 보기 메뉴">
+            <button type="button" onClick={() => void handleDriveImport()}>
+              가져오기
+            </button>
+            <button type="button" onClick={() => goMain("settings")}>
+              설정
+            </button>
+            <a href="/privacy">개인정보처리방침</a>
+            <button type="button" onClick={() => void handleLogout()}>
+              로그아웃
+            </button>
+          </nav>
+        ) : null}
+      </div>
+      {drawerOpen ? (
+        <button
+          type="button"
+          className="drawer-backdrop"
+          aria-label="메뉴 닫기"
+          onClick={() => setDrawerOpen(false)}
+        />
+      ) : null}
       <div className="app-shell">
-        <aside className="sidebar">
+        <aside className={drawerOpen ? "sidebar drawer-open" : "sidebar"}>
           <NaiteLogo size={36} />
           <button type="button" className="new-memo-btn" onClick={() => void handleNewMemo()}>
             + 새 메모
@@ -552,6 +649,15 @@ export function App(props: { auth: AuthProvider }) {
         </aside>
 
         <div className="app-main">
+          {/* 모바일 상단 full-width "+ 새 메모" 버튼 (데스크톱에서는 안 보인다).
+              모바일 FAB은 가림 문제로 빼기로 한 결정 그대로 — 이 버튼이 대신한다. */}
+          <button
+            type="button"
+            className="mobile-new-memo"
+            onClick={() => void handleNewMemo()}
+          >
+            + 새 메모
+          </button>
           <header className="header">
             <NaiteLogo size={36} />
             <input
